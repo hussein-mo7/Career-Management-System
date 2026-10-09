@@ -2,13 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE, verifyAccessToken } from "@/server/auth/token";
 
-const PUBLIC_PAGES = new Set(["/", "/login", "/setup"]);
-const PUBLIC_API = new Set([
-  "/api/auth/login",
-  "/api/auth/setup",
-  "/api/auth/status",
-  "/api/auth/logout",
-]);
+const PUBLIC_PAGES = new Set(["/", "/login"]);
+const PUBLIC_API = new Set(["/api/auth/login", "/api/auth/logout"]);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

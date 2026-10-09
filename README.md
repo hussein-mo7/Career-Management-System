@@ -66,7 +66,7 @@ scripts/seed.ts         optional example data
 
 ## Authentication
 
-The app is for one personal account. The first visit can create that account at `/setup`. After that, setup is closed.
+The app is for one personal account. Sign-up is closed. Sign in at `/login`.
 
 Login issues a signed access token in an httpOnly cookie. There is no refresh token. The token lasts 7 days. Passwords are hashed with bcrypt. Routes and API handlers reject missing or invalid tokens. Secrets live in environment variables.
 
@@ -105,7 +105,7 @@ Create `.env` as shown above. MongoDB must be running at the URI you set.
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). If no account exists, create one from the login page.
+Open [http://localhost:3000](http://localhost:3000) and sign in. There is no public sign-up.
 
 ## Production
 

@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -18,10 +16,6 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const status = useQuery({
-    queryKey: ["auth-status"],
-    queryFn: () => api<{ needsSetup: boolean }>("/api/auth/status"),
-  });
   const [loading, setLoading] = useState(false);
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -60,14 +54,6 @@ export default function LoginPage() {
           Log in
         </Button>
       </form>
-      {status.data?.needsSetup ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No account yet.{" "}
-          <Link href="/setup" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Create the first account
-          </Link>
-        </p>
-      ) : null}
     </AuthCard>
   );
 }
