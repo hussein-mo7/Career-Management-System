@@ -103,11 +103,11 @@ export function DashboardPage() {
               {data.nextActions.map((action) => (
                 <li key={action.id}>
                   <Link href={action.href} className="block rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/40">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-medium">{action.title}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <p className="min-w-0 font-medium break-words">{action.title}</p>
                       <StatusBadge value={action.source === "action" ? "pending" : "networking"} label={action.related} />
                     </div>
-                    <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                       <p className={`text-xs ${isOverdue(action.dueDate) ? "text-destructive" : "text-muted-foreground"}`}>
                         {action.dueDate ? (isOverdue(action.dueDate) ? `Overdue · ${formatDay(action.dueDate)}` : formatDay(action.dueDate)) : "No date"}
                       </p>

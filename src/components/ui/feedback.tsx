@@ -17,7 +17,7 @@ export function Badge({
     danger: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
   };
   return (
-    <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium", tones[tone], className)}>
+    <span className={cn("inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-xs font-medium", tones[tone], className)}>
       {children}
     </span>
   );
@@ -110,8 +110,8 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
         {description ? <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {action}
@@ -133,7 +133,7 @@ export function Pagination({
   const pages = Math.max(1, Math.ceil(total / limit));
   if (pages <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
       <p className="text-muted-foreground">
         Page {page} of {pages}
       </p>

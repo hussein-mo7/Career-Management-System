@@ -95,8 +95,8 @@ export function InterviewsPage() {
             <li key={interview.id}>
               <Link href={`/interviews/${interview.id}`} className="block rounded-lg border border-border bg-card p-4 hover:border-primary/40">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{interview.role}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{interview.role}</p>
                     <p className="text-sm text-muted-foreground">{interview.company?.name} · {INTERVIEW_TYPE_LABELS[interview.type]} · {formatDay(interview.date)}</p>
                   </div>
                   <StatusBadge value={interview.result} label={INTERVIEW_RESULT_LABELS[interview.result]} />

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Hussein Career OS",
-    template: "%s · Hussein Career OS",
+    default: "Career OS",
+    template: "%s · Career OS",
   },
   description:
     "A personal system for managing career growth, job searching, networking, interviews, and continuous learning.",

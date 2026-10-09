@@ -47,7 +47,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Log in"
-      description="This workspace is private. Use the account you created for Hussein Career OS."
+      description="This workspace is private. Sign in with your Career OS account."
     >
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField label="Email" htmlFor="email" error={form.formState.errors.email?.message}>

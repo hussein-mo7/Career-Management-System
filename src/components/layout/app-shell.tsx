@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { NAV_ITEMS, SETTINGS_ITEM } from "@/components/layout/nav";
+import { Logo, LogoMark } from "@/components/logo";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -17,7 +18,7 @@ import type { UserProfile } from "@/types";
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-1 flex-col gap-1" aria-label="Primary">
+    <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto" aria-label="Primary">
       {NAV_ITEMS.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
@@ -58,7 +59,7 @@ function SideFooter({ onNavigate }: { onNavigate?: () => void }) {
     }
   }
   return (
-    <div className="mt-4 space-y-1 border-t border-border pt-4">
+    <div className="mt-4 shrink-0 space-y-1 border-t border-border pt-4">
       <Link
         href={SETTINGS_ITEM.href}
         onClick={onNavigate}
@@ -91,14 +92,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
-      <aside className="hidden border-r border-border bg-sidebar lg:flex lg:min-h-screen lg:flex-col lg:p-4">
-        <Link href="/dashboard" className="mb-6 flex items-center gap-3 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
-            H
-          </span>
+      <aside className="hidden border-r border-border bg-sidebar lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-dvh lg:flex-col lg:self-start lg:overflow-hidden lg:p-4">
+        <Link href="/dashboard" className="mb-6 flex items-center gap-3 px-2" aria-label="Career OS dashboard">
+          <LogoMark className="h-9 w-9" />
           <span>
-            <span className="block text-sm font-semibold">Hussein Career OS</span>
-            <span className="block text-xs text-muted-foreground">{profile.data?.name || "Personal"}</span>
+            <span className="block text-sm font-semibold">Career OS</span>
+            <span className="block text-xs text-muted-foreground">{profile.data?.name || "Workspace"}</span>
           </span>
         </Link>
         <NavLinks />
@@ -108,8 +107,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button className="absolute inset-0 bg-black/45" aria-label="Close menu" onClick={() => setOpen(false)} />
-          <div className="relative flex h-full w-72 flex-col bg-sidebar p-4">
-            <p className="mb-4 px-2 text-sm font-semibold">Navigation</p>
+          <div className="relative flex h-dvh w-[min(18rem,100%)] flex-col overflow-hidden bg-sidebar p-4">
+            <Link href="/dashboard" className="mb-6 px-2" onClick={() => setOpen(false)} aria-label="Career OS dashboard">
+              <Logo />
+            </Link>
             <NavLinks onNavigate={() => setOpen(false)} />
             <SideFooter onNavigate={() => setOpen(false)} />
           </div>
@@ -117,17 +118,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/95 px-3 backdrop-blur sm:px-4">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
             <Menu className="h-4 w-4" />
           </Button>
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex h-9 flex-1 items-center gap-2 rounded-md border border-border bg-card px-3 text-left text-sm text-muted-foreground md:max-w-md"
+            className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-card px-3 text-left text-sm text-muted-foreground md:max-w-md"
           >
-            <Search className="h-4 w-4" aria-hidden="true" />
-            Search companies, people, notes…
+            <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              <span className="sm:hidden">Search</span>
+              <span className="hidden sm:inline">Search companies, people, notes…</span>
+            </span>
           </button>
           <Button
             variant="ghost"
@@ -138,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </header>
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-4 md:px-8">{children}</main>
       </div>
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </div>

@@ -85,8 +85,8 @@ export function ApplicationsPage() {
             <li key={application.id}>
               <Link href={`/applications/${application.id}`} className="block rounded-lg border border-border bg-card p-4 hover:border-primary/40">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{application.role}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{application.role}</p>
                     <p className="text-sm text-muted-foreground">{application.company?.name || "Company"} · {formatDay(application.dateApplied)}</p>
                   </div>
                   <StatusBadge value={application.status} label={APPLICATION_STATUS_LABELS[application.status]} />

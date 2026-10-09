@@ -107,7 +107,7 @@ export function CompaniesPage() {
       ) : null}
       {request.data && request.data.items.length > 0 ? (
         <>
-          <div className="hidden overflow-hidden rounded-lg border border-border md:block">
+          <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/60 text-muted-foreground">
                 <tr>
@@ -142,7 +142,7 @@ export function CompaniesPage() {
             {request.data.items.map((company) => (
               <Link key={company.id} href={`/companies/${company.id}`} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-medium">{company.name}</p>
+                  <p className="min-w-0 font-medium break-words">{company.name}</p>
                   <StatusBadge value={company.status} label={COMPANY_STATUS_LABELS[company.status]} />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{company.nextAction || REMOTE_LABELS[company.remoteModel]}</p>

@@ -1,4 +1,4 @@
-# Hussein Career OS
+# Career OS
 
 A personal career operating system for one developer. It keeps the long-term direction, target companies, conversations, applications, interviews, and the learning that follows in one private place.
 

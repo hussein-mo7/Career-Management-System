@@ -99,8 +99,8 @@ export function NetworkingPage() {
             <li key={person.id}>
               <Link href={`/networking/${person.id}`} className="block rounded-lg border border-border bg-card p-4 hover:border-primary/40">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{person.name}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{person.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {[person.role, person.company?.name].filter(Boolean).join(" · ") || "Independent contact"}
                     </p>

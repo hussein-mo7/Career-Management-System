@@ -38,7 +38,7 @@ export default function SetupPage() {
   return (
     <AuthCard
       title="Create your account"
-      description="This is a single personal account. You only do this once."
+      description="Create your Career OS account. You only do this once for this workspace."
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <FormField label="Name" htmlFor="name">
