@@ -41,7 +41,11 @@ const urlField = z
   .string()
   .trim()
   .max(500)
-  .refine((value) => value === "" || /^https?:\/\/\S+$/i.test(value), "Enter a valid http(s) URL")
+  .transform((value) => {
+    if (!value || /^https?:\/\//i.test(value)) return value;
+    return `https://${value}`;
+  })
+  .refine((value) => value === "" || /^https?:\/\/\S+$/i.test(value), "Enter a valid URL, or leave it blank")
   .optional()
   .default("");
 

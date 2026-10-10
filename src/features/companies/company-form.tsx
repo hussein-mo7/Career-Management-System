@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type FieldErrors, type Resolver } from "react-hook-form";
+import { toast } from "sonner";
 import { COMPANY_STATUSES, COMPANY_STATUS_LABELS, COMPANY_TYPES, COMPANY_TYPE_LABELS, REMOTE_LABELS, REMOTE_MODELS } from "@/lib/constants";
 import { toDateInput } from "@/lib/format";
 import { companySchema } from "@/schemas";
@@ -88,11 +89,19 @@ export function CompanyForm({
     defaultValues: initial,
   });
 
-  const types = useWatch({ control: form.control, name: "types" });
-  const fitRating = useWatch({ control: form.control, name: "fitRating" });
+  const watchedTypes = useWatch({ control: form.control, name: "types", defaultValue: initial.types });
+  const types = Array.isArray(watchedTypes) ? watchedTypes : [];
+  const fitRating = useWatch({ control: form.control, name: "fitRating", defaultValue: initial.fitRating ?? null });
+
+  function onInvalid(errors: FieldErrors<CompanyFormValues>) {
+    const message = Object.values(errors)
+      .map((error) => (error && typeof error.message === "string" ? error.message : ""))
+      .find(Boolean);
+    toast.error(message || "Check the form and try again");
+  }
 
   return (
-    <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="space-y-6" noValidate onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
       <section className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-2">
         <FormField label="Company name" htmlFor="name" error={form.formState.errors.name?.message}>
           <Input id="name" {...form.register("name")} />
@@ -178,6 +187,14 @@ export function CompanyForm({
           </FormField>
         </div>
       </section>
+      {form.formState.submitCount > 0 && Object.keys(form.formState.errors).length > 0 ? (
+        <p className="text-sm text-destructive" role="alert">
+          {Object.values(form.formState.errors)
+            .map((error) => (error && typeof error.message === "string" ? error.message : ""))
+            .filter(Boolean)
+            .join(" ")}
+        </p>
+      ) : null}
       <Button type="submit" loading={loading} loadingLabel="Saving…">
         {submitLabel}
       </Button>
