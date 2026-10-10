@@ -151,11 +151,20 @@ export function mapCompany(doc: Record<string, unknown>): Company {
 
 export function mapPerson(doc: Record<string, unknown>): Person {
   const company = refOf(doc.companyId);
+  const companyName = text(doc.companyName);
+  const companyDisplay =
+    company && company.name
+      ? company
+      : companyName
+        ? { id: company?.id || "", name: companyName }
+        : company?.id
+          ? company
+          : null;
   return {
     id: String(doc._id),
     name: text(doc.name),
     role: text(doc.role),
-    company: company && company.name ? company : company?.id ? company : null,
+    company: companyDisplay,
     linkedin: text(doc.linkedin),
     howWeMet: text(doc.howWeMet),
     relationshipType: (text(doc.relationshipType) || "other") as Person["relationshipType"],

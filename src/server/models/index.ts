@@ -136,6 +136,7 @@ const personSchema = looseSchema(
     userId: userIdField(),
     name: { type: String, required: true, trim: true },
     role: { type: String, default: "" },
+    companyName: { type: String, default: "" },
     companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     linkedin: { type: String, default: "" },
     howWeMet: { type: String, default: "" },

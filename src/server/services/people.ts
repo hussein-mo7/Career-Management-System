@@ -2,15 +2,43 @@ import type { InteractionInput, PersonInput } from "@/schemas";
 import { RELATIONSHIP_TYPES } from "@/lib/constants";
 import { parseDateInput } from "@/server/domain/career";
 import { mapInteraction, mapPerson } from "@/server/domain/map";
-import { CareerAction, Interaction, Person, type LooseDoc } from "@/server/models";
+import { CareerAction, Company, Interaction, Person, type LooseDoc } from "@/server/models";
 import { assertCompany, assertPerson, requireOwned } from "@/server/services/access";
 import { containsRegex } from "@/server/http";
 
-function personPayload(input: PersonInput) {
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function resolvePersonCompany(userId: string, input: PersonInput) {
+  const companyName = (input.companyName || "").trim();
+  let companyId = input.companyId || null;
+
+  if (companyName) {
+    const match = await Company.findOne({
+      userId,
+      name: { $regex: new RegExp(`^${escapeRegex(companyName)}$`, "i") },
+    }).lean();
+    companyId = match ? match._id : null;
+    return { companyName, companyId };
+  }
+
+  if (companyId) {
+    await assertCompany(userId, companyId);
+    const company = await Company.findOne({ _id: companyId, userId }).select("name").lean();
+    return { companyName: company && typeof company.name === "string" ? company.name : "", companyId };
+  }
+
+  return { companyName: "", companyId: null };
+}
+
+async function personPayload(userId: string, input: PersonInput) {
+  const company = await resolvePersonCompany(userId, input);
   return {
     name: input.name,
     role: input.role,
-    companyId: input.companyId || null,
+    companyName: company.companyName,
+    companyId: company.companyId,
     linkedin: input.linkedin,
     howWeMet: input.howWeMet,
     relationshipType: input.relationshipType,
@@ -54,16 +82,14 @@ export async function getPerson(userId: string, id: string) {
 }
 
 export async function createPerson(userId: string, input: PersonInput) {
-  await assertCompany(userId, input.companyId);
-  const doc = await Person.create({ ...personPayload(input), userId });
+  const doc = await Person.create({ ...(await personPayload(userId, input)), userId });
   const populated = await Person.findById(doc._id).populate("companyId", "name").lean();
   return mapPerson(populated ?? doc.toObject());
 }
 
 export async function updatePerson(userId: string, id: string, input: PersonInput) {
   const existing = await requireOwned(Person, userId, id, "Person");
-  await assertCompany(userId, input.companyId);
-  existing.set(personPayload(input));
+  existing.set(await personPayload(userId, input));
   await existing.save();
   const populated = await Person.findById(existing._id).populate("companyId", "name").lean();
   return mapPerson(populated ?? existing.toObject());

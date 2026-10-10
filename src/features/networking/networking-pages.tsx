@@ -25,6 +25,7 @@ import type { Interaction, InteractionType, Page, Person, Reflection, Relationsh
 const emptyPerson = {
   name: "",
   role: "",
+  companyName: "",
   companyId: "",
   linkedin: "",
   howWeMet: "",
@@ -129,7 +130,17 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
     enabled: mode === "edit" && Boolean(id),
     queryFn: () => api<{ person: Person }>(`/api/people/${id}`),
   });
-  const [form, setForm] = useState({ ...emptyPerson, companyId: params.get("companyId") || "" });
+  const companyIdParam = params.get("companyId") || "";
+  const [form, setForm] = useState({ ...emptyPerson, companyId: companyIdParam });
+  const [prefilledCompany, setPrefilledCompany] = useState(false);
+
+  if (!prefilledCompany && companyIdParam && companies.data) {
+    const company = companies.data.items.find((item) => item.id === companyIdParam);
+    if (company) {
+      setPrefilledCompany(true);
+      setForm((current) => ({ ...current, companyId: companyIdParam, companyName: company.name }));
+    }
+  }
 
   const [loadedPerson, setLoadedPerson] = useState(existing.data);
   if (existing.data && existing.data !== loadedPerson) {
@@ -138,6 +149,7 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
     setForm({
       name: person.name,
       role: person.role,
+      companyName: person.company?.name || "",
       companyId: person.company?.id || "",
       linkedin: person.linkedin,
       howWeMet: person.howWeMet,
@@ -178,15 +190,13 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
         <FormField label="Role" htmlFor="role">
           <Input id="role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} />
         </FormField>
-        <FormField label="Company" htmlFor="company">
-          <Select id="company" value={form.companyId} onChange={(event) => setForm({ ...form, companyId: event.target.value })}>
-            <option value="">No company</option>
-            {companies.data?.items.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </Select>
+        <FormField label="Company" htmlFor="company" hint="Type the company name. It links automatically if it already exists in your list.">
+          <Input
+            id="company"
+            value={form.companyName}
+            onChange={(event) => setForm({ ...form, companyName: event.target.value, companyId: "" })}
+            placeholder="e.g. Northwind Labs"
+          />
         </FormField>
         <FormField label="Relationship" htmlFor="relationship">
           <Select id="relationship" value={form.relationshipType} onChange={(event) => setForm({ ...form, relationshipType: event.target.value as RelationshipType })}>

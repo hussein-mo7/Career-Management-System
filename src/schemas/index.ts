@@ -153,6 +153,7 @@ const reflectionSchema = z.object({
 export const personSchema = z.object({
   name: text(120).min(2, "Name is required"),
   role: optionalText(120),
+  companyName: optionalText(160),
   companyId: optionalId,
   linkedin: urlField,
   howWeMet: optionalText(500),
