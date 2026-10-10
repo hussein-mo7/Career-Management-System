@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useCompanyChoices, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
@@ -32,20 +32,55 @@ import type {
   QuestionCategory,
 } from "@/types";
 
-const empty = {
+type InterviewFormValues = {
+  companyName: string;
+  companyId: string;
+  applicationId: string;
+  role: string;
+  date: string;
+  type: InterviewType;
+  interviewer: string;
+  result: InterviewResult;
+  notes: string;
+  wentWell: string;
+  wentWrong: string;
+  lessons: string;
+  nextSteps: string;
+};
+
+const emptyInterview: InterviewFormValues = {
+  companyName: "",
   companyId: "",
   applicationId: "",
   role: "",
   date: "",
-  type: "technical" as InterviewType,
+  type: "technical",
   interviewer: "",
-  result: "pending" as InterviewResult,
+  result: "pending",
   notes: "",
   wentWell: "",
   wentWrong: "",
   lessons: "",
   nextSteps: "",
 };
+
+function interviewToForm(interview: Interview): InterviewFormValues {
+  return {
+    companyName: interview.company?.name || "",
+    companyId: interview.company?.id || "",
+    applicationId: interview.application?.id || "",
+    role: interview.role,
+    date: toDateInput(interview.date),
+    type: interview.type,
+    interviewer: interview.interviewer,
+    result: interview.result,
+    notes: interview.notes,
+    wentWell: interview.wentWell,
+    wentWrong: interview.wentWrong,
+    lessons: interview.lessons,
+    nextSteps: interview.nextSteps,
+  };
+}
 
 export function InterviewsPage() {
   const { params, page, setParam, query } = useListParams();
@@ -112,47 +147,72 @@ export function InterviewsPage() {
 }
 
 export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: string }) {
-  const router = useRouter();
   const params = useSearchParams();
-  const client = useQueryClient();
+  const companyIdParam = params.get("companyId") || "";
   const companies = useCompanyChoices();
-  const [form, setForm] = useState({ ...empty, companyId: params.get("companyId") || "" });
-  const applications = useQuery({
-    queryKey: ["applications", "for-company", form.companyId],
-    enabled: Boolean(form.companyId),
-    queryFn: () => api<Page<import("@/types").Application>>(`/api/applications?companyId=${form.companyId}&limit=50`),
-  });
   const existing = useQuery({
     queryKey: ["interview", id],
     enabled: mode === "edit" && Boolean(id),
     queryFn: () => api<{ interview: Interview }>(`/api/interviews/${id}`),
   });
 
-  const [loadedInterview, setLoadedInterview] = useState(existing.data);
-  if (existing.data && existing.data !== loadedInterview) {
-    const interview = existing.data.interview;
-    setLoadedInterview(existing.data);
-    setForm({
-      companyId: interview.company?.id || "",
-      applicationId: interview.application?.id || "",
-      role: interview.role,
-      date: toDateInput(interview.date),
-      type: interview.type,
-      interviewer: interview.interviewer,
-      result: interview.result,
-      notes: interview.notes,
-      wentWell: interview.wentWell,
-      wentWrong: interview.wentWrong,
-      lessons: interview.lessons,
-      nextSteps: interview.nextSteps,
-    });
+  if (mode === "edit") {
+    if (!id || existing.isLoading) return <Skeleton className="h-64" />;
+    if (existing.isError || !existing.data) {
+      return <ErrorState message="This interview could not be loaded." onRetry={() => existing.refetch()} />;
+    }
+    return <InterviewEditorForm key={id} mode="edit" id={id} initial={interviewToForm(existing.data.interview)} />;
   }
+
+  if (companyIdParam && companies.isLoading) return <Skeleton className="h-64" />;
+
+  let initial = { ...emptyInterview, companyId: companyIdParam };
+  if (companyIdParam && companies.data) {
+    const company = companies.data.items.find((item) => item.id === companyIdParam);
+    if (company) initial = { ...initial, companyName: company.name };
+  }
+
+  return <InterviewEditorForm key={`new-${companyIdParam}`} mode="create" initial={initial} />;
+}
+
+function InterviewEditorForm({
+  mode,
+  id,
+  initial,
+}: {
+  mode: "create" | "edit";
+  id?: string;
+  initial: InterviewFormValues;
+}) {
+  const router = useRouter();
+  const client = useQueryClient();
+  const companies = useCompanyChoices();
+  const [form, setForm] = useState(initial);
+
+  const linkedCompanyId = useMemo(() => {
+    const typed = form.companyName.trim();
+    if (typed && companies.data) {
+      const match = companies.data.items.find((item) => item.name.toLowerCase() === typed.toLowerCase());
+      if (match) return match.id;
+    }
+    return form.companyId;
+  }, [form.companyName, form.companyId, companies.data]);
+
+  const applications = useQuery({
+    queryKey: ["applications", "for-company", linkedCompanyId],
+    enabled: Boolean(linkedCompanyId),
+    queryFn: () => api<Page<import("@/types").Application>>(`/api/applications?companyId=${linkedCompanyId}&limit=50`),
+  });
 
   const save = useMutation({
     mutationFn: () =>
       api<Interview>(mode === "create" ? "/api/interviews" : `/api/interviews/${id}`, {
         method: mode === "create" ? "POST" : "PUT",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          companyId: linkedCompanyId || undefined,
+          applicationId: form.applicationId || undefined,
+        }),
       }),
     onSuccess: async (interview: Interview) => {
       toast.success(mode === "create" ? "Interview added" : "Interview updated");
@@ -163,13 +223,19 @@ export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: st
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (mode === "edit" && existing.isLoading) return <Skeleton className="h-64" />;
-
   return (
     <form className="grid gap-4" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
       <PageHeader title={mode === "create" ? "Add interview" : "Edit interview"} description="Write the outcome while the details are still clear." />
       <div className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-2">
-        <FormField label="Company" htmlFor="company"><Select id="company" required value={form.companyId} onChange={(event) => setForm({ ...form, companyId: event.target.value })}><option value="">Select a company</option>{companies.data?.items.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</Select></FormField>
+        <FormField label="Company" htmlFor="company">
+          <Input
+            id="company"
+            required
+            value={form.companyName}
+            onChange={(event) => setForm({ ...form, companyName: event.target.value, companyId: "" })}
+            placeholder="Company name"
+          />
+        </FormField>
         <FormField label="Role" htmlFor="role"><Input id="role" required value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} /></FormField>
         <FormField label="Application" htmlFor="application"><Select id="application" value={form.applicationId} onChange={(event) => setForm({ ...form, applicationId: event.target.value })}><option value="">No linked application</option>{applications.data?.items.map((item) => <option key={item.id} value={item.id}>{item.role}</option>)}</Select></FormField>
         <FormField label="Date" htmlFor="date"><Input id="date" type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></FormField>

@@ -231,9 +231,19 @@ export function mapAction(doc: Record<string, unknown>): CareerAction {
 
 export function mapInterview(doc: Record<string, unknown>): Interview {
   const application = refOf(doc.applicationId, "role");
+  const company = refOf(doc.companyId);
+  const companyName = text(doc.companyName);
+  const companyDisplay =
+    company && company.name
+      ? company
+      : companyName
+        ? { id: company?.id || "", name: companyName }
+        : company?.id
+          ? company
+          : null;
   return {
     id: String(doc._id),
-    company: refOf(doc.companyId),
+    company: companyDisplay,
     application: application ? { id: application.id, role: application.name } : null,
     role: text(doc.role),
     date: iso(doc.date),

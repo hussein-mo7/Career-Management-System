@@ -2,38 +2,13 @@ import type { InteractionInput, PersonInput } from "@/schemas";
 import { RELATIONSHIP_TYPES } from "@/lib/constants";
 import { parseDateInput } from "@/server/domain/career";
 import { mapInteraction, mapPerson } from "@/server/domain/map";
-import { CareerAction, Company, Interaction, Person, type LooseDoc } from "@/server/models";
-import { assertCompany, assertPerson, requireOwned } from "@/server/services/access";
+import { CareerAction, Interaction, Person, type LooseDoc } from "@/server/models";
+import { assertPerson, requireOwned } from "@/server/services/access";
+import { resolveCompanyLink } from "@/server/services/company-link";
 import { containsRegex } from "@/server/http";
 
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function resolvePersonCompany(userId: string, input: PersonInput) {
-  const companyName = (input.companyName || "").trim();
-  let companyId = input.companyId || null;
-
-  if (companyName) {
-    const match = await Company.findOne({
-      userId,
-      name: { $regex: new RegExp(`^${escapeRegex(companyName)}$`, "i") },
-    }).lean();
-    companyId = match ? match._id : null;
-    return { companyName, companyId };
-  }
-
-  if (companyId) {
-    await assertCompany(userId, companyId);
-    const company = await Company.findOne({ _id: companyId, userId }).select("name").lean();
-    return { companyName: company && typeof company.name === "string" ? company.name : "", companyId };
-  }
-
-  return { companyName: "", companyId: null };
-}
-
 async function personPayload(userId: string, input: PersonInput) {
-  const company = await resolvePersonCompany(userId, input);
+  const company = await resolveCompanyLink(userId, input);
   return {
     name: input.name,
     role: input.role,

@@ -197,20 +197,28 @@ export const actionSchema = z.object({
   status: z.enum(ACTION_STATUSES).optional().default("pending"),
 });
 
-export const interviewSchema = z.object({
-  companyId: objectIdSchema,
-  applicationId: optionalId,
-  role: text(160).min(2, "Role is required"),
-  date: dateField,
-  type: z.enum(INTERVIEW_TYPES).optional().default("technical"),
-  interviewer: optionalText(120),
-  result: z.enum(INTERVIEW_RESULTS).optional().default("pending"),
-  notes: optionalText(4000),
-  wentWell: optionalText(2000),
-  wentWrong: optionalText(2000),
-  lessons: optionalText(2000),
-  nextSteps: optionalText(2000),
-});
+export const interviewSchema = z
+  .object({
+    companyName: optionalText(160),
+    companyId: optionalId,
+    applicationId: optionalId,
+    role: text(160).min(2, "Role is required"),
+    date: dateField,
+    type: z.enum(INTERVIEW_TYPES).optional().default("technical"),
+    interviewer: optionalText(120),
+    result: z.enum(INTERVIEW_RESULTS).optional().default("pending"),
+    notes: optionalText(4000),
+    wentWell: optionalText(2000),
+    wentWrong: optionalText(2000),
+    lessons: optionalText(2000),
+    nextSteps: optionalText(2000),
+  })
+  .superRefine((data, ctx) => {
+    const name = (data.companyName || "").trim();
+    if (!data.companyId && !name) {
+      ctx.addIssue({ code: "custom", message: "Company is required", path: ["companyName"] });
+    }
+  });
 
 export const questionSchema = z.object({
   interviewId: objectIdSchema,

@@ -219,7 +219,8 @@ actionSchema.index({ userId: 1, status: 1, dueDate: 1 });
 const interviewSchema = looseSchema(
   {
     userId: userIdField(),
-    companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true, index: true },
+    companyName: { type: String, default: "" },
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null, index: true },
     applicationId: { type: Schema.Types.ObjectId, ref: "Application", default: null },
     role: { type: String, required: true, trim: true },
     date: { type: Date, default: null },

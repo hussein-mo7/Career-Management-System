@@ -16,12 +16,13 @@ import {
 } from "@/server/models";
 import {
   assertApplication,
-  assertCompany,
   assertInterview,
   assertPerson,
   requireOwned,
 } from "@/server/services/access";
+import { resolveCompanyLink } from "@/server/services/company-link";
 import { containsRegex } from "@/server/http";
+import { ApiError } from "@/lib/errors";
 import type { LearningStatus } from "@/types";
 
 export async function listApplications(
@@ -232,17 +233,20 @@ export async function getInterview(userId: string, id: string) {
 }
 
 export async function createInterview(userId: string, input: InterviewInput) {
-  await assertCompany(userId, input.companyId, true);
+  const company = await resolveCompanyLink(userId, input);
+  if (!company.companyId && !company.companyName) {
+    throw new ApiError("Company is required", 422);
+  }
   if (input.applicationId) {
     const application = await assertApplication(userId, input.applicationId);
-    if (application && String(application.companyId) !== input.companyId) {
-      const { ApiError } = await import("@/lib/errors");
+    if (application && company.companyId && String(application.companyId) !== String(company.companyId)) {
       throw new ApiError("That application belongs to a different company", 422);
     }
   }
   const doc = await Interview.create({
     userId,
-    companyId: input.companyId,
+    companyName: company.companyName,
+    companyId: company.companyId,
     applicationId: input.applicationId || null,
     role: input.role,
     date: parseDateInput(input.date),
@@ -261,10 +265,20 @@ export async function createInterview(userId: string, input: InterviewInput) {
 
 export async function updateInterview(userId: string, id: string, input: InterviewInput) {
   const existing = await requireOwned(Interview, userId, id, "Interview");
-  await assertCompany(userId, input.companyId, true);
+  const company = await resolveCompanyLink(userId, input);
+  if (!company.companyId && !company.companyName) {
+    throw new ApiError("Company is required", 422);
+  }
+  if (input.applicationId) {
+    const application = await assertApplication(userId, input.applicationId);
+    if (application && company.companyId && String(application.companyId) !== String(company.companyId)) {
+      throw new ApiError("That application belongs to a different company", 422);
+    }
+  }
   await assertApplication(userId, input.applicationId);
   existing.set({
-    companyId: input.companyId,
+    companyName: company.companyName,
+    companyId: company.companyId,
     applicationId: input.applicationId || null,
     role: input.role,
     date: parseDateInput(input.date),
