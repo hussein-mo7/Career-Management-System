@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCompanyChoices, useDebounced, useListParams, usePersonChoices } from "@/features/shared";
+import { useCompanyPrefill, useDebounced, useListParams, usePersonChoices } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
 import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
@@ -15,12 +15,28 @@ import { api } from "@/lib/api";
 import { formatDay, toDateInput } from "@/lib/format";
 import type { Application, ApplicationStatus, Page } from "@/types";
 
-const empty = {
+type ApplicationFormValues = {
+  companyName: string;
+  companyId: string;
+  role: string;
+  jobUrl: string;
+  dateApplied: string;
+  status: ApplicationStatus;
+  cvVersion: string;
+  coverLetterNotes: string;
+  contactId: string;
+  notes: string;
+  nextAction: string;
+  followUpDate: string;
+};
+
+const emptyApplication: ApplicationFormValues = {
+  companyName: "",
   companyId: "",
   role: "",
   jobUrl: "",
   dateApplied: "",
-  status: "saved" as ApplicationStatus,
+  status: "saved",
   cvVersion: "",
   coverLetterNotes: "",
   contactId: "",
@@ -29,11 +45,27 @@ const empty = {
   followUpDate: "",
 };
 
+function applicationToForm(item: Application): ApplicationFormValues {
+  return {
+    companyName: item.company?.name || "",
+    companyId: item.company?.id || "",
+    role: item.role,
+    jobUrl: item.jobUrl,
+    dateApplied: toDateInput(item.dateApplied),
+    status: item.status,
+    cvVersion: item.cvVersion,
+    coverLetterNotes: item.coverLetterNotes,
+    contactId: item.contact?.id || "",
+    notes: item.notes,
+    nextAction: item.nextAction,
+    followUpDate: toDateInput(item.followUpDate),
+  };
+}
+
 export function ApplicationsPage() {
   const { params, page, setParam, query } = useListParams();
   const [search, setSearch] = useState(params.get("q") || "");
   const debounced = useDebounced(search);
-  const companies = useCompanyChoices();
   const applications = useQuery({
     queryKey: ["applications", query, debounced],
     queryFn: () => {
@@ -55,21 +87,18 @@ export function ApplicationsPage() {
           </Button>
         }
       />
-      <div className="mb-4 grid gap-2 md:grid-cols-3">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search roles" aria-label="Search roles" />
+      <div className="mb-4 grid gap-2 md:grid-cols-2">
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search role or company"
+          aria-label="Search applications"
+        />
         <Select value={params.get("status") || ""} onChange={(event) => setParam("status", event.target.value)} aria-label="Status">
           <option value="">All statuses</option>
           {APPLICATION_STATUSES.map((status) => (
             <option key={status} value={status}>
               {APPLICATION_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </Select>
-        <Select value={params.get("companyId") || ""} onChange={(event) => setParam("companyId", event.target.value)} aria-label="Company">
-          <option value="">All companies</option>
-          {companies.data?.items.map((company) => (
-            <option key={company.id} value={company.id}>
-              {company.name}
             </option>
           ))}
         </Select>
@@ -103,42 +132,57 @@ export function ApplicationsPage() {
 }
 
 export function ApplicationEditor({ mode, id }: { mode: "create" | "edit"; id?: string }) {
-  const router = useRouter();
   const params = useSearchParams();
-  const client = useQueryClient();
-  const companies = useCompanyChoices();
-  const [form, setForm] = useState({ ...empty, companyId: params.get("companyId") || "" });
-  const people = usePersonChoices(form.companyId || undefined);
+  const companyIdParam = params.get("companyId") || "";
+  const companyPrefill = useCompanyPrefill(companyIdParam);
   const existing = useQuery({
     queryKey: ["application", id],
     enabled: mode === "edit" && Boolean(id),
     queryFn: () => api<Application>(`/api/applications/${id}`),
   });
 
-  const [loadedApplication, setLoadedApplication] = useState(existing.data);
-  if (existing.data && existing.data !== loadedApplication) {
-    const item = existing.data;
-    setLoadedApplication(existing.data);
-    setForm({
-      companyId: item.company?.id || "",
-      role: item.role,
-      jobUrl: item.jobUrl,
-      dateApplied: toDateInput(item.dateApplied),
-      status: item.status,
-      cvVersion: item.cvVersion,
-      coverLetterNotes: item.coverLetterNotes,
-      contactId: item.contact?.id || "",
-      notes: item.notes,
-      nextAction: item.nextAction,
-      followUpDate: toDateInput(item.followUpDate),
-    });
+  if (mode === "edit") {
+    if (!id || existing.isLoading) return <Skeleton className="h-64" />;
+    if (existing.isError || !existing.data) {
+      return <ErrorState message="This application could not be loaded." onRetry={() => existing.refetch()} />;
+    }
+    return <ApplicationEditorForm key={id} mode="edit" id={id} initial={applicationToForm(existing.data)} />;
   }
+
+  if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
+
+  const initial: ApplicationFormValues = {
+    ...emptyApplication,
+    companyId: companyIdParam,
+    companyName: companyPrefill.data?.name || "",
+  };
+
+  return <ApplicationEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
+}
+
+function ApplicationEditorForm({
+  mode,
+  id,
+  initial,
+}: {
+  mode: "create" | "edit";
+  id?: string;
+  initial: ApplicationFormValues;
+}) {
+  const router = useRouter();
+  const client = useQueryClient();
+  const [form, setForm] = useState(initial);
+  const people = usePersonChoices();
 
   const save = useMutation({
     mutationFn: () =>
       api<Application>(mode === "create" ? "/api/applications" : `/api/applications/${id}`, {
         method: mode === "create" ? "POST" : "PUT",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          companyId: form.companyId || undefined,
+          contactId: form.contactId || undefined,
+        }),
       }),
     onSuccess: async (item: Application) => {
       toast.success(mode === "create" ? "Application added" : "Application updated");
@@ -148,8 +192,6 @@ export function ApplicationEditor({ mode, id }: { mode: "create" | "edit"; id?: 
     },
     onError: (error: Error) => toast.error(error.message),
   });
-
-  if (mode === "edit" && existing.isLoading) return <Skeleton className="h-64" />;
 
   return (
     <form
@@ -162,12 +204,13 @@ export function ApplicationEditor({ mode, id }: { mode: "create" | "edit"; id?: 
       <PageHeader title={mode === "create" ? "Add application" : "Edit application"} description="Company and role are the only required pieces." />
       <div className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-2">
         <FormField label="Company" htmlFor="company">
-          <Select id="company" value={form.companyId} onChange={(event) => setForm({ ...form, companyId: event.target.value })} required>
-            <option value="">Select a company</option>
-            {companies.data?.items.map((company) => (
-              <option key={company.id} value={company.id}>{company.name}</option>
-            ))}
-          </Select>
+          <Input
+            id="company"
+            value={form.companyName}
+            onChange={(event) => setForm({ ...form, companyName: event.target.value, companyId: "" })}
+            placeholder="Company name"
+            required
+          />
         </FormField>
         <FormField label="Role" htmlFor="role">
           <Input id="role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} required />

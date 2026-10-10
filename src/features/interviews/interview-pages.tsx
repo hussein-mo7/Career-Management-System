@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useCompanyChoices, useDebounced, useListParams } from "@/features/shared";
+import { useCompanyPrefill, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
 import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
@@ -86,7 +86,6 @@ export function InterviewsPage() {
   const { params, page, setParam, query } = useListParams();
   const [search, setSearch] = useState(params.get("q") || "");
   const debounced = useDebounced(search);
-  const companies = useCompanyChoices();
   const interviews = useQuery({
     queryKey: ["interviews", query, debounced],
     queryFn: () => {
@@ -104,8 +103,8 @@ export function InterviewsPage() {
         description="A learning journal: what happened, what was hard, and what to practice next."
         action={<Button asChild><Link href="/interviews/new">Add interview</Link></Button>}
       />
-      <div className="mb-4 grid gap-2 md:grid-cols-4">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search roles" aria-label="Search interviews" />
+      <div className="mb-4 grid gap-2 md:grid-cols-3">
+        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search role or company" aria-label="Search interviews" />
         <Select value={params.get("type") || ""} onChange={(event) => setParam("type", event.target.value)} aria-label="Interview type">
           <option value="">All types</option>
           {INTERVIEW_TYPES.map((type) => <option key={type} value={type}>{INTERVIEW_TYPE_LABELS[type]}</option>)}
@@ -113,10 +112,6 @@ export function InterviewsPage() {
         <Select value={params.get("result") || ""} onChange={(event) => setParam("result", event.target.value)} aria-label="Result">
           <option value="">All results</option>
           {INTERVIEW_RESULTS.map((result) => <option key={result} value={result}>{INTERVIEW_RESULT_LABELS[result]}</option>)}
-        </Select>
-        <Select value={params.get("companyId") || ""} onChange={(event) => setParam("companyId", event.target.value)} aria-label="Company">
-          <option value="">All companies</option>
-          {companies.data?.items.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
         </Select>
       </div>
       {interviews.isLoading ? <Skeleton className="h-48" /> : null}
@@ -149,7 +144,7 @@ export function InterviewsPage() {
 export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: string }) {
   const params = useSearchParams();
   const companyIdParam = params.get("companyId") || "";
-  const companies = useCompanyChoices();
+  const companyPrefill = useCompanyPrefill(companyIdParam);
   const existing = useQuery({
     queryKey: ["interview", id],
     enabled: mode === "edit" && Boolean(id),
@@ -164,15 +159,15 @@ export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: st
     return <InterviewEditorForm key={id} mode="edit" id={id} initial={interviewToForm(existing.data.interview)} />;
   }
 
-  if (companyIdParam && companies.isLoading) return <Skeleton className="h-64" />;
+  if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
 
-  let initial = { ...emptyInterview, companyId: companyIdParam };
-  if (companyIdParam && companies.data) {
-    const company = companies.data.items.find((item) => item.id === companyIdParam);
-    if (company) initial = { ...initial, companyName: company.name };
-  }
+  const initial: InterviewFormValues = {
+    ...emptyInterview,
+    companyId: companyIdParam,
+    companyName: companyPrefill.data?.name || "",
+  };
 
-  return <InterviewEditorForm key={`new-${companyIdParam}`} mode="create" initial={initial} />;
+  return <InterviewEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
 }
 
 function InterviewEditorForm({
@@ -186,23 +181,18 @@ function InterviewEditorForm({
 }) {
   const router = useRouter();
   const client = useQueryClient();
-  const companies = useCompanyChoices();
   const [form, setForm] = useState(initial);
 
-  const linkedCompanyId = useMemo(() => {
-    const typed = form.companyName.trim();
-    if (typed && companies.data) {
-      const match = companies.data.items.find((item) => item.name.toLowerCase() === typed.toLowerCase());
-      if (match) return match.id;
-    }
-    return form.companyId;
-  }, [form.companyName, form.companyId, companies.data]);
-
   const applications = useQuery({
-    queryKey: ["applications", "for-company", linkedCompanyId],
-    enabled: Boolean(linkedCompanyId),
-    queryFn: () => api<Page<import("@/types").Application>>(`/api/applications?companyId=${linkedCompanyId}&limit=50`),
+    queryKey: ["applications", "choices"],
+    queryFn: () => api<Page<import("@/types").Application>>("/api/applications?limit=50"),
   });
+
+  const linkedApplications = useMemo(() => {
+    const typed = form.companyName.trim().toLowerCase();
+    if (!typed || !applications.data) return [];
+    return applications.data.items.filter((item) => (item.company?.name || "").toLowerCase() === typed);
+  }, [form.companyName, applications.data]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -210,7 +200,7 @@ function InterviewEditorForm({
         method: mode === "create" ? "POST" : "PUT",
         body: JSON.stringify({
           ...form,
-          companyId: linkedCompanyId || undefined,
+          companyId: form.companyId || undefined,
           applicationId: form.applicationId || undefined,
         }),
       }),
@@ -237,7 +227,7 @@ function InterviewEditorForm({
           />
         </FormField>
         <FormField label="Role" htmlFor="role"><Input id="role" required value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} /></FormField>
-        <FormField label="Application" htmlFor="application"><Select id="application" value={form.applicationId} onChange={(event) => setForm({ ...form, applicationId: event.target.value })}><option value="">No linked application</option>{applications.data?.items.map((item) => <option key={item.id} value={item.id}>{item.role}</option>)}</Select></FormField>
+        <FormField label="Application" htmlFor="application"><Select id="application" value={form.applicationId} onChange={(event) => setForm({ ...form, applicationId: event.target.value })}><option value="">No linked application</option>{linkedApplications.map((item) => <option key={item.id} value={item.id}>{item.role}</option>)}</Select></FormField>
         <FormField label="Date" htmlFor="date"><Input id="date" type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></FormField>
         <FormField label="Type" htmlFor="type"><Select id="type" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}>{INTERVIEW_TYPES.map((type) => <option key={type} value={type}>{INTERVIEW_TYPE_LABELS[type]}</option>)}</Select></FormField>
         <FormField label="Result" htmlFor="result"><Select id="result" value={form.result} onChange={(event) => setForm({ ...form, result: event.target.value as InterviewResult })}>{INTERVIEW_RESULTS.map((result) => <option key={result} value={result}>{INTERVIEW_RESULT_LABELS[result]}</option>)}</Select></FormField>

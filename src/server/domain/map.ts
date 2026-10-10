@@ -51,6 +51,15 @@ export function refOf(value: unknown, nameKey: "name" | "role" = "name") {
   return null;
 }
 
+function linkedCompany(doc: Record<string, unknown>) {
+  const company = refOf(doc.companyId);
+  const companyName = text(doc.companyName);
+  if (company && company.name) return company;
+  if (companyName) return { id: company?.id || "", name: companyName };
+  if (company?.id) return company;
+  return null;
+}
+
 function reflectionOf(value: unknown): Reflection {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
@@ -150,21 +159,11 @@ export function mapCompany(doc: Record<string, unknown>): Company {
 }
 
 export function mapPerson(doc: Record<string, unknown>): Person {
-  const company = refOf(doc.companyId);
-  const companyName = text(doc.companyName);
-  const companyDisplay =
-    company && company.name
-      ? company
-      : companyName
-        ? { id: company?.id || "", name: companyName }
-        : company?.id
-          ? company
-          : null;
   return {
     id: String(doc._id),
     name: text(doc.name),
     role: text(doc.role),
-    company: companyDisplay,
+    company: linkedCompany(doc),
     linkedin: text(doc.linkedin),
     howWeMet: text(doc.howWeMet),
     relationshipType: (text(doc.relationshipType) || "other") as Person["relationshipType"],
@@ -196,7 +195,7 @@ export function mapInteraction(doc: Record<string, unknown>): Interaction {
 export function mapApplication(doc: Record<string, unknown>): Application {
   return {
     id: String(doc._id),
-    company: refOf(doc.companyId),
+    company: linkedCompany(doc),
     role: text(doc.role),
     jobUrl: text(doc.jobUrl),
     dateApplied: iso(doc.dateApplied),
@@ -218,7 +217,7 @@ export function mapAction(doc: Record<string, unknown>): CareerAction {
   return {
     id: String(doc._id),
     title: text(doc.title),
-    company: refOf(doc.companyId),
+    company: linkedCompany(doc),
     person: refOf(doc.personId),
     application: application ? { id: application.id, role: application.name } : null,
     dueDate: iso(doc.dueDate),
@@ -231,19 +230,9 @@ export function mapAction(doc: Record<string, unknown>): CareerAction {
 
 export function mapInterview(doc: Record<string, unknown>): Interview {
   const application = refOf(doc.applicationId, "role");
-  const company = refOf(doc.companyId);
-  const companyName = text(doc.companyName);
-  const companyDisplay =
-    company && company.name
-      ? company
-      : companyName
-        ? { id: company?.id || "", name: companyName }
-        : company?.id
-          ? company
-          : null;
   return {
     id: String(doc._id),
-    company: companyDisplay,
+    company: linkedCompany(doc),
     application: application ? { id: application.id, role: application.name } : null,
     role: text(doc.role),
     date: iso(doc.date),

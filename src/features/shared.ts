@@ -40,6 +40,17 @@ export function useCompanyChoices() {
   });
 }
 
+export function useCompanyPrefill(companyId: string) {
+  return useQuery({
+    queryKey: ["company-prefill", companyId],
+    enabled: Boolean(companyId),
+    queryFn: async () => {
+      const data = await api<{ company: Company }>(`/api/companies/${companyId}`);
+      return data.company;
+    },
+  });
+}
+
 export function usePersonChoices(companyId?: string) {
   const query = companyId ? `?limit=50&companyId=${companyId}` : "?limit=50";
   return useQuery({

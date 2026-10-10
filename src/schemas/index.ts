@@ -174,22 +174,31 @@ export const interactionSchema = z.object({
   createAction: z.boolean().optional().default(false),
 });
 
-export const applicationSchema = z.object({
-  companyId: objectIdSchema,
-  role: text(160).min(2, "Role is required"),
-  jobUrl: urlField,
-  dateApplied: dateField,
-  status: z.enum(APPLICATION_STATUSES).optional().default("saved"),
-  cvVersion: optionalText(80),
-  coverLetterNotes: optionalText(4000),
-  contactId: optionalId,
-  notes: optionalText(4000),
-  nextAction: optionalText(240),
-  followUpDate: dateField,
-});
+export const applicationSchema = z
+  .object({
+    companyName: optionalText(160),
+    companyId: optionalId,
+    role: text(160).min(2, "Role is required"),
+    jobUrl: urlField,
+    dateApplied: dateField,
+    status: z.enum(APPLICATION_STATUSES).optional().default("saved"),
+    cvVersion: optionalText(80),
+    coverLetterNotes: optionalText(4000),
+    contactId: optionalId,
+    notes: optionalText(4000),
+    nextAction: optionalText(240),
+    followUpDate: dateField,
+  })
+  .superRefine((data, ctx) => {
+    const name = (data.companyName || "").trim();
+    if (!data.companyId && !name) {
+      ctx.addIssue({ code: "custom", message: "Company is required", path: ["companyName"] });
+    }
+  });
 
 export const actionSchema = z.object({
   title: text(240).min(2, "Action is required"),
+  companyName: optionalText(160),
   companyId: optionalId,
   personId: optionalId,
   applicationId: optionalId,

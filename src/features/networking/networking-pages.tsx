@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { useCompanyChoices, useDebounced, useListParams } from "@/features/shared";
+import { useCompanyPrefill, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
 import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from "@/components/ui/feedback";
@@ -116,7 +116,7 @@ export function NetworkingPage() {
 export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: string }) {
   const params = useSearchParams();
   const companyIdParam = params.get("companyId") || "";
-  const companies = useCompanyChoices();
+  const companyPrefill = useCompanyPrefill(companyIdParam);
   const existing = useQuery({
     queryKey: ["person", id],
     enabled: mode === "edit" && Boolean(id),
@@ -131,15 +131,15 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
     return <PersonEditorForm key={id} mode="edit" id={id} initial={personToForm(existing.data.person)} />;
   }
 
-  if (companyIdParam && companies.isLoading) return <Skeleton className="h-64" />;
+  if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
 
-  let initial = { ...emptyPerson, companyId: companyIdParam };
-  if (companyIdParam && companies.data) {
-    const company = companies.data.items.find((item) => item.id === companyIdParam);
-    if (company) initial = { ...initial, companyName: company.name };
-  }
+  const initial: PersonFormValues = {
+    ...emptyPerson,
+    companyId: companyIdParam,
+    companyName: companyPrefill.data?.name || "",
+  };
 
-  return <PersonEditorForm key={`new-${companyIdParam}`} mode="create" initial={initial} />;
+  return <PersonEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
 }
 
 function PersonEditorForm({

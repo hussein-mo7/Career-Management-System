@@ -35,7 +35,7 @@ export async function listApplications(
   if (status && (APPLICATION_STATUSES as readonly string[]).includes(status)) filter.status = status;
   if (companyId) filter.companyId = companyId;
   const regex = containsRegex(query.q);
-  if (regex) filter.role = regex;
+  if (regex) filter.$or = [{ role: regex }, { companyName: regex }];
   const [items, total] = await Promise.all([
     Application.find(filter)
       .sort({ updatedAt: -1 })
@@ -64,11 +64,15 @@ export async function getApplication(userId: string, id: string) {
 }
 
 export async function createApplication(userId: string, input: ApplicationInput) {
-  await assertCompany(userId, input.companyId, true);
+  const company = await resolveCompanyLink(userId, input);
+  if (!company.companyId && !company.companyName) {
+    throw new ApiError("Company is required", 422);
+  }
   await assertPerson(userId, input.contactId);
   const doc = await Application.create({
     userId,
-    companyId: input.companyId,
+    companyName: company.companyName,
+    companyId: company.companyId,
     role: input.role,
     jobUrl: input.jobUrl,
     dateApplied: parseDateInput(input.dateApplied),
@@ -86,10 +90,14 @@ export async function createApplication(userId: string, input: ApplicationInput)
 
 export async function updateApplication(userId: string, id: string, input: ApplicationInput) {
   const existing = await requireOwned(Application, userId, id, "Application");
-  await assertCompany(userId, input.companyId, true);
+  const company = await resolveCompanyLink(userId, input);
+  if (!company.companyId && !company.companyName) {
+    throw new ApiError("Company is required", 422);
+  }
   await assertPerson(userId, input.contactId);
   existing.set({
-    companyId: input.companyId,
+    companyName: company.companyName,
+    companyId: company.companyId,
     role: input.role,
     jobUrl: input.jobUrl,
     dateApplied: parseDateInput(input.dateApplied),
@@ -133,13 +141,14 @@ export async function listActions(userId: string, url: URL) {
 }
 
 export async function createAction(userId: string, input: ActionInput) {
-  await assertCompany(userId, input.companyId);
+  const company = await resolveCompanyLink(userId, input);
   await assertPerson(userId, input.personId);
   await assertApplication(userId, input.applicationId);
   const doc = await CareerAction.create({
     userId,
     title: input.title,
-    companyId: input.companyId || null,
+    companyName: company.companyName,
+    companyId: company.companyId,
     personId: input.personId || null,
     applicationId: input.applicationId || null,
     dueDate: parseDateInput(input.dueDate),
@@ -155,12 +164,13 @@ export async function createAction(userId: string, input: ActionInput) {
 
 export async function updateAction(userId: string, id: string, input: ActionInput) {
   const existing = await requireOwned(CareerAction, userId, id, "Action");
-  await assertCompany(userId, input.companyId);
+  const company = await resolveCompanyLink(userId, input);
   await assertPerson(userId, input.personId);
   await assertApplication(userId, input.applicationId);
   existing.set({
     title: input.title,
-    companyId: input.companyId || null,
+    companyName: company.companyName,
+    companyId: company.companyId,
     personId: input.personId || null,
     applicationId: input.applicationId || null,
     dueDate: parseDateInput(input.dueDate),
@@ -205,7 +215,7 @@ export async function listInterviews(
   if (result && (INTERVIEW_RESULTS as readonly string[]).includes(result)) filter.result = result;
   if (companyId) filter.companyId = companyId;
   const regex = containsRegex(query.q);
-  if (regex) filter.role = regex;
+  if (regex) filter.$or = [{ role: regex }, { companyName: regex }];
   const [items, total] = await Promise.all([
     Interview.find(filter)
       .sort({ date: -1, createdAt: -1 })

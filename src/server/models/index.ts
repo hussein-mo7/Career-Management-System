@@ -184,7 +184,8 @@ const interactionSchema = looseSchema(
 const applicationSchema = looseSchema(
   {
     userId: userIdField(),
-    companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true, index: true },
+    companyName: { type: String, default: "" },
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null, index: true },
     role: { type: String, required: true, trim: true },
     jobUrl: { type: String, default: "" },
     dateApplied: { type: Date, default: null },
@@ -205,6 +206,7 @@ const actionSchema = looseSchema(
   {
     userId: userIdField(),
     title: { type: String, required: true, trim: true },
+    companyName: { type: String, default: "" },
     companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     personId: { type: Schema.Types.ObjectId, ref: "Person", default: null },
     applicationId: { type: Schema.Types.ObjectId, ref: "Application", default: null },
