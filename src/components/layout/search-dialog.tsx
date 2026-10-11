@@ -69,7 +69,7 @@ export function SearchDialog({
           onCloseAutoFocus={() => setValue("")}
         >
           <Dialog.Title className="sr-only">Search</Dialog.Title>
-          <Dialog.Description className="sr-only">Search companies, people, applications, interviews, questions, and notes.</Dialog.Description>
+          <Dialog.Description className="sr-only">Search companies, people, applications, and interviews.</Dialog.Description>
           <input
             autoFocus
             value={value}

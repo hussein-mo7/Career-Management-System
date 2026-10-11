@@ -165,11 +165,10 @@ export function DashboardPage() {
         <div className="space-y-8">
           <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
             <SectionTitle as="h3">This week</SectionTitle>
-            <dl className="mt-5 grid grid-cols-2 gap-4 sm:gap-5">
+            <dl className="mt-5 grid grid-cols-3 gap-4 sm:gap-5">
               <WeekMetric label="Applications" value={data.week.applications} />
               <WeekMetric label="Conversations" value={data.week.conversations} />
               <WeekMetric label="Interviews" value={data.week.interviews} />
-              <WeekMetric label="Learning updates" value={data.week.learningUpdates} />
             </dl>
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">
               {data.week.wins || "Add this week’s wins on the Progress page."}

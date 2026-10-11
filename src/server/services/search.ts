@@ -3,8 +3,6 @@ import {
   Application,
   Company,
   Interview,
-  InterviewQuestion,
-  Note,
   Person,
   type LooseDoc,
 } from "@/server/models";
@@ -14,13 +12,11 @@ export async function searchRecords(userId: string, rawQuery: string) {
   const regex = containsRegex(q);
   if (!regex || q.length < 2) return { query: q, results: [] };
 
-  const [companies, people, applications, interviews, questions, notes] = await Promise.all([
+  const [companies, people, applications, interviews] = await Promise.all([
     Company.find({ userId, name: regex }).select("name status").limit(5).lean(),
     Person.find({ userId, name: regex }).select("name role").limit(5).lean(),
     Application.find({ userId, role: regex }).select("role").populate("companyId", "name").limit(5).lean(),
     Interview.find({ userId, role: regex }).select("role").populate("companyId", "name").limit(5).lean(),
-    InterviewQuestion.find({ userId, question: regex }).select("question interviewId").limit(5).lean(),
-    Note.find({ userId, $or: [{ title: regex }, { content: regex }] }).select("title").limit(5).lean(),
   ]);
 
   return {
@@ -49,18 +45,6 @@ export async function searchRecords(userId: string, rawQuery: string) {
         type: "Interview",
         title: item.role,
         href: `/interviews/${item._id}`,
-      })),
-      ...questions.map((item: LooseDoc) => ({
-        id: String(item._id),
-        type: "Question",
-        title: item.question,
-        href: `/interviews/${item.interviewId}`,
-      })),
-      ...notes.map((item: LooseDoc) => ({
-        id: String(item._id),
-        type: "Note",
-        title: item.title,
-        href: "/notes",
       })),
     ],
   };

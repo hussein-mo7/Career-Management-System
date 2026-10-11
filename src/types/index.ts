@@ -8,10 +8,6 @@ import type {
   INTERACTION_TYPES,
   INTERVIEW_RESULTS,
   INTERVIEW_TYPES,
-  LEARNING_CATEGORIES,
-  LEARNING_STATUSES,
-  NOTE_CATEGORIES,
-  QUESTION_CATEGORIES,
   RELATIONSHIP_TYPES,
   REMOTE_MODELS,
   REMOTE_PREFERENCES,
@@ -30,12 +26,8 @@ export type InteractionType = (typeof INTERACTION_TYPES)[number];
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export type InterviewType = (typeof INTERVIEW_TYPES)[number];
 export type InterviewResult = (typeof INTERVIEW_RESULTS)[number];
-export type QuestionCategory = (typeof QUESTION_CATEGORIES)[number];
-export type LearningCategory = (typeof LEARNING_CATEGORIES)[number];
-export type LearningStatus = (typeof LEARNING_STATUSES)[number];
 export type SkillGroup = (typeof SKILL_GROUPS)[number];
 export type SkillStatus = (typeof SKILL_STATUSES)[number];
-export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
 export type RemotePreference = (typeof REMOTE_PREFERENCES)[number];
 
 export type Page<T> = {
@@ -213,46 +205,6 @@ export type Interview = {
   updatedAt: string;
 };
 
-export type InterviewQuestion = {
-  id: string;
-  interviewId: string;
-  interview: { id: string; role: string; companyName: string } | null;
-  question: string;
-  category: QuestionCategory;
-  answerNotes: string;
-  performance: string;
-  improvement: string;
-  learningStatus: LearningStatus;
-  relatedTopic: string;
-  isDemo: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type LearningItem = {
-  id: string;
-  title: string;
-  category: LearningCategory;
-  status: LearningStatus;
-  notes: string;
-  topic: string;
-  sourceQuestionId: string | null;
-  isDemo: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Note = {
-  id: string;
-  title: string;
-  content: string;
-  category: NoteCategory;
-  tags: string[];
-  isDemo: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type WeeklyProgress = {
   id: string;
   weekStart: string;
@@ -282,7 +234,7 @@ export type NextActionItem = {
 };
 
 export type DashboardInsight = {
-  tone: "priority" | "learning" | "networking" | "applications" | "preparation";
+  tone: "priority" | "networking" | "applications";
   text: string;
 };
 
@@ -308,7 +260,6 @@ export type DashboardData = {
     applications: number;
     conversations: number;
     interviews: number;
-    learningUpdates: number;
     wins: string;
     lessons: string;
     focus: string;

@@ -1,4 +1,3 @@
-import { CATEGORY_LABELS } from "@/lib/constants";
 import { buildDashboardInsights, endOfWeek, startOfWeek } from "@/server/domain/career";
 import { refOf } from "@/server/domain/map";
 import {
@@ -8,9 +7,6 @@ import {
   Company,
   Interaction,
   Interview,
-  InterviewQuestion,
-  LearningItem,
-  Note,
   Person,
   WeeklyProgress,
   type LooseDoc,
@@ -37,9 +33,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
     offerCompanies,
     activeApplications,
     dueActions,
-    needToLearn,
-    learningQuestions,
-    learningItems,
     pendingActions,
     companiesWithAction,
     applicationsWithAction,
@@ -48,12 +41,9 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
     recentApplications,
     recentInterviews,
     recentInteractions,
-    recentNotes,
     weekApplications,
     weekConversations,
     weekInterviews,
-    weekQuestions,
-    weekItems,
     weekDoc,
     recentContacts,
     pendingPeople,
@@ -72,9 +62,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
       status: "pending",
       dueDate: { $gte: weekStart, $lt: weekEnd },
     }),
-    InterviewQuestion.countDocuments({ userId, learningStatus: "need_to_learn" }),
-    InterviewQuestion.find({ userId, learningStatus: { $in: ["need_to_learn", "practicing"] } }).select("category").lean(),
-    LearningItem.find({ userId, status: { $in: ["need_to_learn", "practicing"] } }).select("category").lean(),
     CareerAction.find({ userId, status: "pending" })
       .sort({ dueDate: 1, createdAt: -1 })
       .limit(12)
@@ -92,26 +79,13 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
     Application.find({ userId }).sort({ createdAt: -1 }).limit(4).populate("companyId", "name").lean(),
     Interview.find({ userId }).sort({ createdAt: -1 }).limit(4).populate("companyId", "name").lean(),
     Interaction.find({ userId }).sort({ createdAt: -1 }).limit(4).populate("personId", "name").lean(),
-    Note.find({ userId }).sort({ createdAt: -1 }).limit(4).lean(),
     Application.countDocuments({ userId, createdAt: { $gte: weekStart, $lt: weekEnd } }),
     Interaction.countDocuments({ userId, createdAt: { $gte: weekStart, $lt: weekEnd } }),
     Interview.countDocuments({ userId, createdAt: { $gte: weekStart, $lt: weekEnd } }),
-    InterviewQuestion.countDocuments({ userId, updatedAt: { $gte: weekStart, $lt: weekEnd } }),
-    LearningItem.countDocuments({ userId, updatedAt: { $gte: weekStart, $lt: weekEnd } }),
     WeeklyProgress.findOne({ userId, weekStart }).lean(),
     Interaction.find({ userId, createdAt: { $gte: since }, nextStep: { $nin: ["", null] } }).select("personId").lean(),
     CareerAction.find({ userId, status: "pending", personId: { $ne: null } }).distinct("personId"),
   ]);
-
-  const counts = new Map<string, number>();
-  for (const item of [...learningQuestions, ...learningItems]) {
-    const category = String(item.category || "general");
-    counts.set(category, (counts.get(category) ?? 0) + 1);
-  }
-  const topLearningCategories = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 2)
-    .map(([category]) => CATEGORY_LABELS[category] ?? category);
 
   const contactIds = [...new Set(recentContacts.map((item: LooseDoc) => String(item.personId)))];
   const pendingSet = new Set(pendingPeople.map(String));
@@ -203,14 +177,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
         href: person ? `/networking/${person.id}` : "/networking",
       };
     }),
-    ...recentNotes.map((item: LooseDoc) => ({
-      id: `note-${item._id}`,
-      type: "Note",
-      title: item.title,
-      detail: item.category,
-      date: new Date(item.createdAt).toISOString(),
-      href: "/notes",
-    })),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
@@ -233,17 +199,14 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
     activity,
     insights: buildDashboardInsights({
       followUpsDueThisWeek: dueActions,
-      needToLearn,
       staleNetworking,
       activeApplications,
-      topLearningCategories,
     }),
     week: {
       weekStart: weekStart.toISOString(),
       applications: weekApplications,
       conversations: weekConversations,
       interviews: weekInterviews,
-      learningUpdates: weekQuestions + weekItems,
       wins: weekDoc?.wins || "",
       lessons: weekDoc?.lessons || "",
       focus: weekDoc?.focus || "",

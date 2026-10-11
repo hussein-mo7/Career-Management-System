@@ -24,8 +24,6 @@ const labels: Record<string, string> = {
   applications: "Applications",
   interviews: "Interviews",
   offers: "Offers",
-  learningItems: "Learning items",
-  masteredQuestions: "Mastered questions",
 };
 
 export function ProgressPage() {

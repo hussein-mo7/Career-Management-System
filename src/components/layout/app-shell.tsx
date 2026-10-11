@@ -130,7 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">
               <span className="sm:hidden">Search</span>
-              <span className="hidden sm:inline">Search companies, people, notes…</span>
+              <span className="hidden sm:inline">Search companies, people, applications…</span>
             </span>
           </button>
           <Button

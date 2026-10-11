@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { applicationSchema, companySchema, interviewSchema, loginSchema } from "@/schemas";
 import {
   buildDashboardInsights,
-  canTransitionLearningStatus,
   parseDateInput,
   startOfWeek,
 } from "@/server/domain/career";
@@ -102,34 +101,17 @@ describe("application creation", () => {
   });
 });
 
-describe("learning status transitions", () => {
-  it("allows movement between every learning status", () => {
-    expect(canTransitionLearningStatus("need_to_learn", "practicing")).toBe(true);
-    expect(canTransitionLearningStatus("practicing", "comfortable")).toBe(true);
-    expect(canTransitionLearningStatus("comfortable", "mastered")).toBe(true);
-    expect(canTransitionLearningStatus("mastered", "need_to_learn")).toBe(true);
-  });
-
-  it("rejects staying on the same status", () => {
-    expect(canTransitionLearningStatus("practicing", "practicing")).toBe(false);
-  });
-});
-
 describe("dashboard insights", () => {
   it("builds messages from real counts", () => {
     const insights = buildDashboardInsights({
       followUpsDueThisWeek: 3,
-      needToLearn: 7,
       staleNetworking: 2,
       activeApplications: 4,
-      topLearningCategories: ["Backend", "System design"],
     });
     expect(insights.map((item) => item.text)).toEqual([
       "3 follow-ups are due this week.",
-      "You have 7 interview questions marked Need to Learn.",
       "You have not followed up with 2 recent networking contacts.",
       "You have 4 active applications.",
-      "Backend and System design are currently your largest learning areas.",
     ]);
   });
 
@@ -137,10 +119,8 @@ describe("dashboard insights", () => {
     expect(
       buildDashboardInsights({
         followUpsDueThisWeek: 0,
-        needToLearn: 0,
         staleNetworking: 0,
         activeApplications: 0,
-        topLearningCategories: [],
       }),
     ).toEqual([]);
   });

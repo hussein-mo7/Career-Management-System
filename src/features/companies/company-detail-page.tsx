@@ -163,7 +163,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
       <section>
         <h2 className="font-semibold">Activity</h2>
         {activity.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Research notes, conversations, applications, and interviews will collect here.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Conversations, applications, and interviews will collect here.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {activity.map((item) => (
@@ -182,7 +182,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
       <ConfirmDialog
         open={confirm}
         title={`Delete ${company.name}?`}
-        description="This deletes the company and its linked people, conversations, applications, interviews, and actions. Notes you wrote separately stay."
+        description="This deletes the company and its linked people, conversations, applications, interviews, and actions."
         loading={remove.isPending}
         onOpenChange={setConfirm}
         onConfirm={() => remove.mutate()}

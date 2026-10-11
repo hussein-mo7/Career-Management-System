@@ -106,7 +106,7 @@ export function SettingsPage() {
         <Button type="button" className="mt-4" variant="secondary" onClick={() => setConfirmDemo(true)}>Remove example data</Button>
       </section>
 
-      <ConfirmDialog open={confirmDemo} title="Remove example data?" description="Demo companies, people, applications, interviews, notes, and actions will be deleted. Your own records stay." confirmLabel="Remove" loading={removeDemo.isPending} onOpenChange={setConfirmDemo} onConfirm={() => removeDemo.mutate()} />
+      <ConfirmDialog open={confirmDemo} title="Remove example data?" description="Demo companies, people, applications, interviews, and actions will be deleted. Your own records stay." confirmLabel="Remove" loading={removeDemo.isPending} onOpenChange={setConfirmDemo} onConfirm={() => removeDemo.mutate()} />
     </div>
   );
 }

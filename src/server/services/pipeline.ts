@@ -3,27 +3,24 @@ import {
   INTERVIEW_RESULTS,
   INTERVIEW_TYPES,
 } from "@/lib/constants";
-import type { ActionInput, ApplicationInput, InterviewInput, QuestionInput } from "@/schemas";
+import type { ActionInput, ApplicationInput, InterviewInput } from "@/schemas";
 import { parseDateInput } from "@/server/domain/career";
-import { mapAction, mapApplication, mapInterview, mapQuestion } from "@/server/domain/map";
+import { mapAction, mapApplication, mapInterview } from "@/server/domain/map";
 import {
   Application,
   CareerAction,
   Interview,
   InterviewQuestion,
-  LearningItem,
   type LooseDoc,
 } from "@/server/models";
 import {
   assertApplication,
-  assertInterview,
   assertPerson,
   requireOwned,
 } from "@/server/services/access";
 import { resolveCompanyLink } from "@/server/services/company-link";
 import { containsRegex } from "@/server/http";
 import { ApiError } from "@/lib/errors";
-import type { LearningStatus } from "@/types";
 
 export async function listApplications(
   userId: string,
@@ -292,45 +289,7 @@ export async function updateInterview(userId: string, id: string, input: Intervi
 
 export async function deleteInterview(userId: string, id: string) {
   const existing = await requireOwned(Interview, userId, id, "Interview");
-  const questions = await InterviewQuestion.find({ userId, interviewId: id }).select("_id");
-  const ids = questions.map((item: LooseDoc) => item._id);
-  await LearningItem.updateMany({ userId, sourceQuestionId: { $in: ids } }, { sourceQuestionId: null });
   await InterviewQuestion.deleteMany({ userId, interviewId: id });
-  await existing.deleteOne();
-  return { deleted: true };
-}
-
-async function syncQuestion(userId: string, questionId: string, status: LearningStatus) {
-  await LearningItem.updateMany({ userId, sourceQuestionId: questionId }, { status });
-}
-
-export async function createQuestion(userId: string, input: QuestionInput) {
-  await assertInterview(userId, input.interviewId, true);
-  const doc = await InterviewQuestion.create({ ...input, userId });
-  await syncQuestion(userId, String(doc._id), input.learningStatus);
-  return mapQuestion(doc.toObject());
-}
-
-export async function updateQuestion(userId: string, id: string, input: QuestionInput) {
-  const existing = await requireOwned(InterviewQuestion, userId, id, "Question");
-  await assertInterview(userId, input.interviewId, true);
-  existing.set(input);
-  await existing.save();
-  await syncQuestion(userId, id, input.learningStatus);
-  return mapQuestion(existing.toObject());
-}
-
-export async function updateQuestionStatus(userId: string, id: string, learningStatus: LearningStatus) {
-  const existing = await requireOwned(InterviewQuestion, userId, id, "Question");
-  existing.learningStatus = learningStatus;
-  await existing.save();
-  await syncQuestion(userId, id, learningStatus);
-  return mapQuestion(existing.toObject());
-}
-
-export async function deleteQuestion(userId: string, id: string) {
-  const existing = await requireOwned(InterviewQuestion, userId, id, "Question");
-  await LearningItem.updateMany({ userId, sourceQuestionId: id }, { sourceQuestionId: null });
   await existing.deleteOne();
   return { deleted: true };
 }

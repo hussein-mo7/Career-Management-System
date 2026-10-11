@@ -7,9 +7,6 @@ import type {
   Criterion,
   Interaction,
   Interview,
-  InterviewQuestion,
-  LearningItem,
-  Note,
   Person,
   Reflection,
   UserProfile,
@@ -244,63 +241,6 @@ export function mapInterview(doc: Record<string, unknown>): Interview {
     wentWrong: text(doc.wentWrong),
     lessons: text(doc.lessons),
     nextSteps: text(doc.nextSteps),
-    isDemo: flag(doc.isDemo),
-    createdAt: requiredIso(doc.createdAt),
-    updatedAt: requiredIso(doc.updatedAt),
-  };
-}
-
-export function mapQuestion(doc: Record<string, unknown>): InterviewQuestion {
-  const interview = doc.interviewId;
-  let summary: InterviewQuestion["interview"] = null;
-  if (interview && typeof interview === "object" && "_id" in interview) {
-    const record = interview as Record<string, unknown>;
-    const company = refOf(record.companyId);
-    summary = {
-      id: String(record._id),
-      role: text(record.role),
-      companyName: company?.name || "",
-    };
-  }
-  return {
-    id: String(doc._id),
-    interviewId: summary?.id || String(doc.interviewId),
-    interview: summary,
-    question: text(doc.question),
-    category: (text(doc.category) || "general") as InterviewQuestion["category"],
-    answerNotes: text(doc.answerNotes),
-    performance: text(doc.performance),
-    improvement: text(doc.improvement),
-    learningStatus: (text(doc.learningStatus) || "need_to_learn") as InterviewQuestion["learningStatus"],
-    relatedTopic: text(doc.relatedTopic),
-    isDemo: flag(doc.isDemo),
-    createdAt: requiredIso(doc.createdAt),
-    updatedAt: requiredIso(doc.updatedAt),
-  };
-}
-
-export function mapLearning(doc: Record<string, unknown>): LearningItem {
-  return {
-    id: String(doc._id),
-    title: text(doc.title),
-    category: (text(doc.category) || "general") as LearningItem["category"],
-    status: (text(doc.status) || "need_to_learn") as LearningItem["status"],
-    notes: text(doc.notes),
-    topic: text(doc.topic),
-    sourceQuestionId: doc.sourceQuestionId ? String(doc.sourceQuestionId) : null,
-    isDemo: flag(doc.isDemo),
-    createdAt: requiredIso(doc.createdAt),
-    updatedAt: requiredIso(doc.updatedAt),
-  };
-}
-
-export function mapNote(doc: Record<string, unknown>): Note {
-  return {
-    id: String(doc._id),
-    title: text(doc.title),
-    content: text(doc.content),
-    category: (text(doc.category) || "general") as Note["category"],
-    tags: Array.isArray(doc.tags) ? doc.tags.map(String) : [],
     isDemo: flag(doc.isDemo),
     createdAt: requiredIso(doc.createdAt),
     updatedAt: requiredIso(doc.updatedAt),

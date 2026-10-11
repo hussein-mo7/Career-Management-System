@@ -8,9 +8,6 @@ import {
   Company,
   Interaction,
   Interview,
-  InterviewQuestion,
-  LearningItem,
-  Note,
   Person,
   User,
   WeeklyProgress,
@@ -231,7 +228,7 @@ async function main() {
     },
   ]);
 
-  const [technical, hr] = await Interview.create([
+  await Interview.create([
     {
       userId: user._id,
       isDemo: true,
@@ -261,89 +258,6 @@ async function main() {
       wentWrong: "I still listed tools before the story.",
       lessons: "Lead with the problem I solved.",
       nextSteps: "Prepare a two-minute career story.",
-    },
-  ]);
-
-  await InterviewQuestion.create([
-    {
-      userId: user._id,
-      isDemo: true,
-      interviewId: technical._id,
-      question: "How would you design a REST API for this feature?",
-      category: "api",
-      learningStatus: "practicing",
-      performance: "I got the resources right but skipped error shapes.",
-      improvement: "Include validation and error responses in the first answer.",
-      relatedTopic: "REST API design",
-    },
-    {
-      userId: user._id,
-      isDemo: true,
-      interviewId: technical._id,
-      question: "How does authentication work in this stack?",
-      category: "authentication",
-      learningStatus: "need_to_learn",
-      performance: "I mixed up sessions and access tokens.",
-      improvement: "Explain one auth approach end to end.",
-      relatedTopic: "Authentication",
-    },
-    {
-      userId: user._id,
-      isDemo: true,
-      interviewId: technical._id,
-      question: "How do you manage state in React?",
-      category: "react",
-      learningStatus: "comfortable",
-      performance: "Clear answer on local state versus server state.",
-      relatedTopic: "React state",
-    },
-    {
-      userId: user._id,
-      isDemo: true,
-      interviewId: technical._id,
-      question: "When would you add an index in MongoDB?",
-      category: "database",
-      learningStatus: "need_to_learn",
-      improvement: "Practice with a real query plan.",
-      relatedTopic: "Database indexing",
-    },
-    {
-      userId: user._id,
-      isDemo: true,
-      interviewId: hr._id,
-      question: "How would you design the API boundary for a new product area?",
-      category: "system_design",
-      learningStatus: "practicing",
-      relatedTopic: "System design",
-    },
-  ]);
-
-  await LearningItem.create({
-    userId: user._id,
-    isDemo: true,
-    title: "Tell a career story instead of listing technologies",
-    category: "communication",
-    status: "practicing",
-    topic: "Storytelling",
-    notes: "From the example coffee chat. Lead with the problem, then the work, then the result.",
-  });
-
-  await Note.create([
-    {
-      userId: user._id,
-      isDemo: true,
-      title: "What good startup support looks like",
-      category: "career",
-      tags: ["startups", "mentorship"],
-      content: "Real product, senior engineers, code review, and reasonable expectations. Chaos is not the same thing as a startup.",
-    },
-    {
-      userId: user._id,
-      isDemo: true,
-      title: "Interview reminder",
-      category: "interview",
-      tags: ["storytelling"],
-      content: "Answer with a story: context, decision, trade-off, result.",
     },
   ]);
 

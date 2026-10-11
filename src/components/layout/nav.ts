@@ -1,11 +1,9 @@
 import {
   Building2,
   Compass,
-  GraduationCap,
   LayoutDashboard,
   ListChecks,
   MessagesSquare,
-  NotebookPen,
   Send,
   Settings,
   TrendingUp,
@@ -20,8 +18,6 @@ export const NAV_ITEMS = [
   { href: "/networking", label: "Networking", icon: Users },
   { href: "/applications", label: "Applications", icon: Send },
   { href: "/interviews", label: "Interviews", icon: MessagesSquare },
-  { href: "/learning", label: "Learning", icon: GraduationCap },
-  { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/progress", label: "Progress", icon: TrendingUp },
 ] as const;
 

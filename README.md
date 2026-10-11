@@ -1,8 +1,8 @@
 # Career OS
 
-A personal career operating system for one developer. It keeps the long-term direction, target companies, conversations, applications, interviews, and the learning that follows in one private place.
+A personal career operating system for one developer. It keeps the long-term direction, target companies, conversations, applications, and interviews in one private place.
 
-The point is not to collect records. The loop is **capture → learn → improve → move forward**.
+The point is not to collect records. The loop is **capture → remember → review → move forward**.
 
 ## Features
 
@@ -12,11 +12,9 @@ The point is not to collect records. The loop is **capture → learn → improve
 - People, coffee chats, and optional communication reflections
 - Job applications and follow-ups
 - Lightweight next actions on the dashboard
-- Interview records, questions, and learning status
-- A learning board from questions, topics, and career skills
-- Notes
+- Interview records with a date, stage, outcome, and notes
 - Weekly reflection and simple progress counts
-- Search across companies, people, applications, interviews, questions, and notes
+- Search across companies, people, applications, and interviews
 - Light, dark, and system themes
 
 ## Tech stack
@@ -124,7 +122,7 @@ You can override it with `MONGODB_DB` when the URI should stay the same and the 
 
 ## Seed data
 
-Example companies, people, conversations, applications, interviews, questions, notes, and actions are optional. They are marked as demo data and can be removed from Settings without deleting your account, criteria, or career direction.
+Example companies, people, conversations, applications, interviews, and actions are optional. They are marked as demo data and can be removed from Settings without deleting your account, criteria, or career direction.
 
 ```bash
 npm run seed
@@ -134,7 +132,7 @@ The command creates the account from `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` 
 
 ## Screenshots
 
-Screenshots of the dashboard, companies, interviews, and learning board will go here.
+Screenshots of the dashboard, companies, and interviews will go here.
 
 ## Tests
 
@@ -142,7 +140,7 @@ Screenshots of the dashboard, companies, interviews, and learning board will go 
 npm run test
 ```
 
-Tests cover authentication, validation, company and application creation, learning-status changes, and dashboard insight text.
+Tests cover authentication, validation, company and application creation, and dashboard insight text.
 
 ## Future improvements
 

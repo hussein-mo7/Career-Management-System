@@ -10,13 +10,13 @@ const steps = [
   },
   {
     number: "02",
-    title: "Learn",
-    text: "Keep what was useful, what was weak, and the question you still need to practice.",
+    title: "Remember",
+    text: "Keep the conversation, the application, or the interview in one place.",
   },
   {
     number: "03",
-    title: "Improve",
-    text: "Move each topic from need to learn toward comfortable, one practice at a time.",
+    title: "Review",
+    text: "Read the note you wrote and decide what to do next.",
   },
   {
     number: "04",
@@ -44,18 +44,14 @@ const areas = [
   },
   {
     title: "Interviews",
-    text: "The questions you were asked, how you answered, and what to practice before the next one.",
-  },
-  {
-    title: "Practice",
-    text: "A learning board that stays tied to real interviews, not a separate list of topics.",
+    text: "The date, the stage, the outcome, and one note about what happened.",
   },
 ];
 
 const preview = [
   { label: "Company", title: "Review fit and concerns", meta: "Research" },
   { label: "Conversation", title: "Send the follow-up you promised", meta: "This week" },
-  { label: "Practice", title: "Move one question to Practicing", meta: "Learning" },
+  { label: "Interview", title: "Write what happened while it is still clear", meta: "This week" },
 ];
 
 export default function HomePage() {

@@ -9,10 +9,6 @@ import {
   INTERACTION_TYPES,
   INTERVIEW_RESULTS,
   INTERVIEW_TYPES,
-  LEARNING_CATEGORIES,
-  LEARNING_STATUSES,
-  NOTE_CATEGORIES,
-  QUESTION_CATEGORIES,
   RELATIONSHIP_TYPES,
   REMOTE_MODELS,
   REMOTE_PREFERENCES,
@@ -212,37 +208,6 @@ export const interviewSchema = z
     }
   });
 
-export const questionSchema = z.object({
-  interviewId: objectIdSchema,
-  question: text(500).min(2, "Question is required"),
-  category: z.enum(QUESTION_CATEGORIES).optional().default("general"),
-  answerNotes: optionalText(4000),
-  performance: optionalText(2000),
-  improvement: optionalText(2000),
-  learningStatus: z.enum(LEARNING_STATUSES).optional().default("need_to_learn"),
-  relatedTopic: optionalText(160),
-});
-
-export const questionStatusSchema = z.object({
-  learningStatus: z.enum(LEARNING_STATUSES),
-});
-
-export const learningItemSchema = z.object({
-  title: text(240).min(2, "Title is required"),
-  category: z.enum(LEARNING_CATEGORIES).optional().default("general"),
-  status: z.enum(LEARNING_STATUSES).optional().default("need_to_learn"),
-  notes: optionalText(4000),
-  topic: optionalText(160),
-  sourceQuestionId: optionalId,
-});
-
-export const noteSchema = z.object({
-  title: text(160).min(2, "Title is required"),
-  content: optionalText(20000),
-  category: z.enum(NOTE_CATEGORIES).optional().default("general"),
-  tags: z.array(text(40)).max(12).optional().default([]),
-});
-
 export const weeklySchema = z.object({
   weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid week"),
   wins: optionalText(4000),
@@ -257,7 +222,4 @@ export type PersonInput = z.infer<typeof personSchema>;
 export type InteractionInput = z.infer<typeof interactionSchema>;
 export type ActionInput = z.infer<typeof actionSchema>;
 export type InterviewInput = z.infer<typeof interviewSchema>;
-export type QuestionInput = z.infer<typeof questionSchema>;
-export type LearningItemInput = z.infer<typeof learningItemSchema>;
-export type NoteInput = z.infer<typeof noteSchema>;
 export type CriterionInput = z.infer<typeof criterionSchema>;

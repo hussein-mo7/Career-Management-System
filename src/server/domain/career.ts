@@ -1,14 +1,3 @@
-import type { LearningStatus } from "@/types";
-import { LEARNING_STATUSES } from "@/lib/constants";
-
-export function isLearningStatus(value: string): value is LearningStatus {
-  return (LEARNING_STATUSES as readonly string[]).includes(value);
-}
-
-export function canTransitionLearningStatus(from: LearningStatus, to: LearningStatus) {
-  return isLearningStatus(from) && isLearningStatus(to) && from !== to;
-}
-
 export function parseDateInput(value?: string | null) {
   if (!value) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -31,15 +20,13 @@ export function endOfWeek(weekStart: Date) {
 
 export type InsightInput = {
   followUpsDueThisWeek: number;
-  needToLearn: number;
   staleNetworking: number;
   activeApplications: number;
-  topLearningCategories: string[];
 };
 
 export function buildDashboardInsights(input: InsightInput) {
   const insights: {
-    tone: "priority" | "learning" | "networking" | "applications" | "preparation";
+    tone: "priority" | "networking" | "applications";
     text: string;
   }[] = [];
 
@@ -48,14 +35,6 @@ export function buildDashboardInsights(input: InsightInput) {
     insights.push({
       tone: "priority",
       text: `${input.followUpsDueThisWeek} ${noun} due this week.`,
-    });
-  }
-
-  if (input.needToLearn > 0) {
-    const noun = input.needToLearn === 1 ? "question" : "questions";
-    insights.push({
-      tone: "learning",
-      text: `You have ${input.needToLearn} interview ${noun} marked Need to Learn.`,
     });
   }
 
@@ -72,16 +51,6 @@ export function buildDashboardInsights(input: InsightInput) {
     insights.push({
       tone: "applications",
       text: `You have ${input.activeApplications} active ${noun}.`,
-    });
-  }
-
-  if (input.topLearningCategories.length > 0) {
-    const names = input.topLearningCategories.join(" and ");
-    const verb = input.topLearningCategories.length === 1 ? "is" : "are";
-    const noun = input.topLearningCategories.length === 1 ? "area" : "areas";
-    insights.push({
-      tone: "preparation",
-      text: `${names} ${verb} currently your largest learning ${noun}.`,
     });
   }
 
