@@ -92,7 +92,7 @@ export const INTERVIEW_TYPES = [
   "other",
 ] as const;
 
-export const INTERVIEW_RESULTS = ["pending", "passed", "rejected", "offer", "withdrawn"] as const;
+export const INTERVIEW_RESULTS = ["pending", "completed", "passed", "rejected", "cancelled", "offer", "withdrawn"] as const;
 
 export const QUESTION_CATEGORIES = [
   "hr",
@@ -274,9 +274,11 @@ export const INTERVIEW_TYPE_LABELS: Record<(typeof INTERVIEW_TYPES)[number], str
 };
 
 export const INTERVIEW_RESULT_LABELS: Record<(typeof INTERVIEW_RESULTS)[number], string> = {
-  pending: "Pending",
+  pending: "Scheduled",
+  completed: "Completed",
   passed: "Passed",
   rejected: "Rejected",
+  cancelled: "Cancelled",
   offer: "Offer",
   withdrawn: "Withdrawn",
 };

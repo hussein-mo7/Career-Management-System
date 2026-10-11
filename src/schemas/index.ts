@@ -4,7 +4,6 @@ import {
   APPLICATION_STATUSES,
   COMPANY_STATUSES,
   COMPANY_TYPES,
-  CRITERIA_EVALUATIONS,
   CRITERION_CATEGORIES,
   CRITERION_PRIORITIES,
   INTERACTION_TYPES,
@@ -120,26 +119,11 @@ export const companySchema = z.object({
   types: z.array(z.enum(COMPANY_TYPES)).max(6).optional().default([]),
   size: optionalText(80),
   remoteModel: z.enum(REMOTE_MODELS).optional().default("unknown"),
-  description: optionalText(4000),
   whyInterests: optionalText(4000),
-  whyFits: optionalText(4000),
-  concerns: optionalText(4000),
-  notes: optionalText(4000),
   nextAction: optionalText(240),
   nextActionDate: dateField,
   status: z.enum(COMPANY_STATUSES).optional().default("discovered"),
   fitRating: rating,
-});
-
-export const evaluationSchema = z.object({
-  evaluations: z
-    .array(
-      z.object({
-        criterionId: objectIdSchema,
-        status: z.enum(CRITERIA_EVALUATIONS),
-      }),
-    )
-    .max(80),
 });
 
 const reflectionSchema = z.object({
@@ -218,13 +202,8 @@ export const interviewSchema = z
     role: text(160).min(2, "Role is required"),
     date: dateField,
     type: z.enum(INTERVIEW_TYPES).optional().default("technical"),
-    interviewer: optionalText(120),
     result: z.enum(INTERVIEW_RESULTS).optional().default("pending"),
     notes: optionalText(4000),
-    wentWell: optionalText(2000),
-    wentWrong: optionalText(2000),
-    lessons: optionalText(2000),
-    nextSteps: optionalText(2000),
   })
   .superRefine((data, ctx) => {
     const name = (data.companyName || "").trim();

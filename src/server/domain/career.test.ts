@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicationSchema, companySchema, loginSchema } from "@/schemas";
+import { applicationSchema, companySchema, interviewSchema, loginSchema } from "@/schemas";
 import {
   buildDashboardInsights,
   canTransitionLearningStatus,
@@ -23,6 +23,24 @@ describe("company creation", () => {
     expect(result.success).toBe(false);
   });
 
+  it("keeps fit score and why this company, and ignores retired evaluation fields", () => {
+    const parsed = companySchema.parse({
+      name: "Northwind Labs",
+      fitRating: 4,
+      whyInterests: "Small team shipping a real product.",
+      description: "Stored elsewhere",
+      whyFits: "Stored elsewhere",
+      concerns: "Stored elsewhere",
+      notes: "Stored elsewhere",
+    });
+    expect(parsed.fitRating).toBe(4);
+    expect(parsed.whyInterests).toBe("Small team shipping a real product.");
+    expect(parsed).not.toHaveProperty("description");
+    expect(parsed).not.toHaveProperty("whyFits");
+    expect(parsed).not.toHaveProperty("concerns");
+    expect(parsed).not.toHaveProperty("notes");
+  });
+
   it("stores an optional fit rating and date", () => {
     const parsed = companySchema.parse({
       name: "Harbor Devtools",
@@ -33,6 +51,37 @@ describe("company creation", () => {
     expect(parsed.fitRating).toBe(5);
     expect(parsed.nextActionDate).toBe("2026-10-12");
     expect(parseDateInput(parsed.nextActionDate)?.toISOString()).toBe("2026-10-12T00:00:00.000Z");
+  });
+});
+
+describe("interview creation", () => {
+  it("accepts a company and role without notes", () => {
+    const parsed = interviewSchema.parse({
+      companyName: "Northwind Labs",
+      role: "Backend Developer",
+    });
+    expect(parsed.role).toBe("Backend Developer");
+    expect(parsed.notes).toBe("");
+    expect(parsed.result).toBe("pending");
+    expect(parsed.type).toBe("technical");
+  });
+
+  it("stores a completed outcome and notes, and ignores retired reflection fields", () => {
+    const parsed = interviewSchema.parse({
+      companyName: "Northwind Labs",
+      role: "Backend Developer",
+      result: "completed",
+      notes: "The system design discussion was the hard part.",
+      wentWell: "Stored elsewhere",
+      wentWrong: "Stored elsewhere",
+      lessons: "Stored elsewhere",
+      nextSteps: "Stored elsewhere",
+      interviewer: "Stored elsewhere",
+    });
+    expect(parsed.result).toBe("completed");
+    expect(parsed.notes).toBe("The system design discussion was the hard part.");
+    expect(parsed).not.toHaveProperty("wentWell");
+    expect(parsed).not.toHaveProperty("interviewer");
   });
 });
 

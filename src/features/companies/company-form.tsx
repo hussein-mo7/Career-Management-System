@@ -20,11 +20,7 @@ export type CompanyFormValues = {
   types: string[];
   size: string;
   remoteModel: string;
-  description: string;
   whyInterests: string;
-  whyFits: string;
-  concerns: string;
-  notes: string;
   nextAction: string;
   nextActionDate: string;
   status: string;
@@ -40,11 +36,7 @@ export const emptyCompany: CompanyFormValues = {
   types: [],
   size: "",
   remoteModel: "unknown",
-  description: "",
   whyInterests: "",
-  whyFits: "",
-  concerns: "",
-  notes: "",
   nextAction: "",
   nextActionDate: "",
   status: "discovered",
@@ -61,11 +53,7 @@ export function companyToForm(company: Company): CompanyFormValues {
     types: company.types,
     size: company.size,
     remoteModel: company.remoteModel,
-    description: company.description,
     whyInterests: company.whyInterests,
-    whyFits: company.whyFits,
-    concerns: company.concerns,
-    notes: company.notes,
     nextAction: company.nextAction,
     nextActionDate: toDateInput(company.nextActionDate),
     status: company.status,
@@ -118,7 +106,7 @@ export function CompanyForm({
         <FormField label="Industry" htmlFor="industry">
           <Input id="industry" {...form.register("industry")} />
         </FormField>
-        <FormField label="Size" htmlFor="size">
+        <FormField label="Company size" htmlFor="size">
           <Input id="size" placeholder="About 8 engineers" {...form.register("size")} />
         </FormField>
         <FormField label="Remote model" htmlFor="remote">
@@ -157,26 +145,14 @@ export function CompanyForm({
             ))}
           </div>
         </div>
+        <FormField label="Fit score">
+          <Rating value={fitRating} onChange={(value) => form.setValue("fitRating", value, { shouldDirty: true })} />
+        </FormField>
       </section>
 
       <section className="space-y-4 rounded-lg border border-border bg-card p-5">
-        <FormField label="Fit">
-          <Rating value={fitRating} onChange={(value) => form.setValue("fitRating", value, { shouldDirty: true })} />
-        </FormField>
         <FormField label="Why this company?" htmlFor="why">
           <TextArea id="why" {...form.register("whyInterests")} />
-        </FormField>
-        <FormField label="Why it fits" htmlFor="fits">
-          <TextArea id="fits" {...form.register("whyFits")} />
-        </FormField>
-        <FormField label="Concerns" htmlFor="concerns">
-          <TextArea id="concerns" {...form.register("concerns")} />
-        </FormField>
-        <FormField label="Description" htmlFor="description">
-          <TextArea id="description" {...form.register("description")} />
-        </FormField>
-        <FormField label="Notes" htmlFor="notes">
-          <TextArea id="notes" {...form.register("notes")} />
         </FormField>
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Next action" htmlFor="next">

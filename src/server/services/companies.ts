@@ -1,11 +1,10 @@
 import type { CompanyInput } from "@/schemas";
 import { parseDateInput } from "@/server/domain/career";
-import { mapApplication, mapCompany, mapCriterion, mapPerson } from "@/server/domain/map";
+import { mapApplication, mapCompany, mapPerson } from "@/server/domain/map";
 import {
   Application,
   CareerAction,
   Company,
-  CompanyCriterion,
   Interaction,
   Interview,
   InterviewQuestion,
@@ -27,11 +26,7 @@ function companyPayload(input: CompanyInput) {
     types: input.types,
     size: input.size,
     remoteModel: input.remoteModel,
-    description: input.description,
     whyInterests: input.whyInterests,
-    whyFits: input.whyFits,
-    concerns: input.concerns,
-    notes: input.notes,
     nextAction: input.nextAction,
     nextActionDate: parseDateInput(input.nextActionDate),
     status: input.status,
@@ -74,12 +69,11 @@ export async function listCompanies(
 
 export async function getCompany(userId: string, id: string) {
   const company = await requireOwned(Company, userId, id, "Company");
-  const [people, applications, interviews, actions, criteria, interactions] = await Promise.all([
+  const [people, applications, interviews, actions, interactions] = await Promise.all([
     Person.find({ userId, companyId: id }).sort({ name: 1 }).populate("companyId", "name").lean(),
     Application.find({ userId, companyId: id }).sort({ updatedAt: -1 }).populate("companyId", "name").populate("contactId", "name").lean(),
     Interview.find({ userId, companyId: id }).sort({ date: -1 }).populate("companyId", "name").populate("applicationId", "role").lean(),
     CareerAction.find({ userId, companyId: id }).sort({ dueDate: 1 }).lean(),
-    CompanyCriterion.find({ userId }).sort({ priority: 1, order: 1 }).lean(),
     Interaction.find({ userId }).sort({ date: -1 }).limit(40).populate("personId", "name companyId").lean(),
   ]);
 
@@ -131,16 +125,10 @@ export async function getCompany(userId: string, id: string) {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 12);
 
-  const mapped = mapCompany(company.toObject());
   return {
-    company: mapped,
+    company: mapCompany(company.toObject()),
     people: people.map((item: LooseDoc) => mapPerson(item)),
     applications: applications.map((item: LooseDoc) => mapApplication(item)),
-    criteria: criteria.map((item: LooseDoc) => {
-      const criterion = mapCriterion(item);
-      const evaluation = mapped.criteriaEvaluations.find((entry) => entry.criterionId === criterion.id);
-      return { ...criterion, evaluation: evaluation?.status ?? null };
-    }),
     activity,
   };
 }
@@ -153,24 +141,6 @@ export async function createCompany(userId: string, input: CompanyInput) {
 export async function updateCompany(userId: string, id: string, input: CompanyInput) {
   const existing = await requireOwned(Company, userId, id, "Company");
   existing.set(companyPayload(input));
-  await existing.save();
-  return mapCompany(existing.toObject());
-}
-
-export async function updateCompanyEvaluations(
-  userId: string,
-  id: string,
-  evaluations: { criterionId: string; status: string }[],
-) {
-  const existing = await requireOwned(Company, userId, id, "Company");
-  const owned = await CompanyCriterion.find({
-    userId,
-    _id: { $in: evaluations.map((item: LooseDoc) => item.criterionId) },
-  }).select("_id");
-  const allowed = new Set(owned.map((item: LooseDoc) => String(item._id)));
-  existing.criteriaEvaluations = evaluations
-    .filter((item: LooseDoc) => allowed.has(item.criterionId))
-    .map((item: LooseDoc) => ({ criterionId: item.criterionId, status: item.status }));
   await existing.save();
   return mapCompany(existing.toObject());
 }

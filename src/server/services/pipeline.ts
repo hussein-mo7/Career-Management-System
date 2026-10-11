@@ -231,15 +231,9 @@ export async function listInterviews(
 
 export async function getInterview(userId: string, id: string) {
   await requireOwned(Interview, userId, id, "Interview");
-  const [interview, questions] = await Promise.all([
-    Interview.findOne({ _id: id, userId }).populate("companyId", "name").populate("applicationId", "role").lean(),
-    InterviewQuestion.find({ userId, interviewId: id }).sort({ createdAt: 1 }).lean(),
-  ]);
+  const interview = await Interview.findOne({ _id: id, userId }).populate("companyId", "name").populate("applicationId", "role").lean();
   if (!interview) return null;
-  return {
-    interview: mapInterview(interview),
-    questions: questions.map((item: LooseDoc) => mapQuestion(item)),
-  };
+  return { interview: mapInterview(interview) };
 }
 
 export async function createInterview(userId: string, input: InterviewInput) {
@@ -261,13 +255,8 @@ export async function createInterview(userId: string, input: InterviewInput) {
     role: input.role,
     date: parseDateInput(input.date),
     type: input.type,
-    interviewer: input.interviewer,
     result: input.result,
     notes: input.notes,
-    wentWell: input.wentWell,
-    wentWrong: input.wentWrong,
-    lessons: input.lessons,
-    nextSteps: input.nextSteps,
   });
   const populated = await Interview.findById(doc._id).populate("companyId", "name").populate("applicationId", "role").lean();
   return mapInterview(populated ?? doc.toObject());
@@ -293,13 +282,8 @@ export async function updateInterview(userId: string, id: string, input: Intervi
     role: input.role,
     date: parseDateInput(input.date),
     type: input.type,
-    interviewer: input.interviewer,
     result: input.result,
     notes: input.notes,
-    wentWell: input.wentWell,
-    wentWrong: input.wentWrong,
-    lessons: input.lessons,
-    nextSteps: input.nextSteps,
   });
   await existing.save();
   const populated = await Interview.findById(existing._id).populate("companyId", "name").populate("applicationId", "role").lean();
