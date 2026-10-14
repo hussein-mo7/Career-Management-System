@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import { CompanyForm, companyToForm, emptyCompany, type CompanyFormValues } from "@/features/companies/company-form";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { ErrorState, PageHeader, Skeleton } from "@/components/ui/feedback";
+import { companyPersonEditorPath, personLink } from "@/features/networking/person-nav";
+import { ErrorState, PageHeader, Skeleton, StatusBadge } from "@/components/ui/feedback";
+import { RELATIONSHIP_LABELS } from "@/lib/constants";
 import {
   COMPANY_STATUS_LABELS,
   COMPANY_TYPE_LABELS,
@@ -131,7 +133,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
         <p className="mt-1 text-sm text-muted-foreground">{company.nextActionDate ? formatDay(company.nextActionDate) : "No date yet"}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/networking/new?companyId=${id}`}>Add person</Link>
+            <Link href={companyPersonEditorPath(id)}>Add person</Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
             <Link href={`/applications/new?companyId=${id}`}>Add application</Link>
@@ -143,11 +145,19 @@ export function CompanyDetailPage({ id }: { id: string }) {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <RecordList title="People" empty="No one from this company yet." href={`/networking/new?companyId=${id}`} action="Add person">
+        <RecordList title="People" empty="No one from this company yet." href={companyPersonEditorPath(id)} action="Add person">
           {people.map((person) => (
-            <Link key={person.id} href={`/networking/${person.id}`} className="block py-2 text-sm hover:underline">
-              {person.name}
+            <Link key={person.id} href={personLink(person.id, id)} className="block py-2 text-sm hover:underline">
+              <span className="font-medium">{person.name}</span>
               <span className="text-muted-foreground"> · {person.role || "Contact"}</span>
+              {person.relationshipType && person.relationshipType !== "other" ? (
+                <span className="mt-1 block">
+                  <StatusBadge
+                    value={person.relationshipType}
+                    label={RELATIONSHIP_LABELS[person.relationshipType as keyof typeof RELATIONSHIP_LABELS] || person.relationshipType}
+                  />
+                </span>
+              ) : null}
             </Link>
           ))}
         </RecordList>

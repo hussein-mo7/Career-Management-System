@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Badge({
@@ -98,6 +100,18 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
         </button>
       ) : null}
     </div>
+  );
+}
+
+export function DetailBackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {label}
+    </Link>
   );
 }
 

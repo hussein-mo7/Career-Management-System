@@ -226,6 +226,27 @@ export const CATEGORY_LABELS: Record<string, string> = {
   ideas: "Ideas",
 };
 
+/** Groups for the networking list when no filter is selected. */
+export const NETWORKING_GROUPS = [
+  { id: "hiring", label: "Recruiters & hiring", types: ["recruiter"] as const },
+  {
+    id: "team",
+    label: "People at target companies",
+    types: [
+      "developer",
+      "senior_developer",
+      "tech_lead",
+      "engineering_manager",
+      "cto",
+      "founder",
+      "product_manager",
+      "designer",
+    ] as const,
+  },
+  { id: "support", label: "Mentors & coaches", types: ["mentor", "tap_contact"] as const },
+  { id: "other", label: "Other connections", types: ["other"] as const },
+] as const;
+
 export const RELATIONSHIP_LABELS: Record<(typeof RELATIONSHIP_TYPES)[number], string> = {
   recruiter: "Recruiter",
   developer: "Developer",

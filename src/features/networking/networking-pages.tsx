@@ -8,18 +8,26 @@ import { toast } from "sonner";
 import { useCompanyPrefill, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from "@/components/ui/feedback";
+import { companyBackFromParams, personLink, personReturnQuery } from "@/features/networking/person-nav";
+import { DetailBackLink, EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
 import { FormField, Input, Select, TextArea } from "@/components/ui/fields";
-import { INTERACTION_LABELS, INTERACTION_TYPES } from "@/lib/constants";
+import {
+  INTERACTION_LABELS,
+  INTERACTION_TYPES,
+  NETWORKING_GROUPS,
+  RELATIONSHIP_LABELS,
+  RELATIONSHIP_TYPES,
+} from "@/lib/constants";
 import { api } from "@/lib/api";
 import { formatDay } from "@/lib/format";
-import type { Interaction, InteractionType, Page, Person } from "@/types";
+import type { Interaction, InteractionType, Page, Person, RelationshipType } from "@/types";
 
 type PersonFormValues = {
   name: string;
   role: string;
   companyName: string;
   companyId: string;
+  relationshipType: RelationshipType;
   notes: string;
 };
 
@@ -28,6 +36,7 @@ const emptyPerson: PersonFormValues = {
   role: "",
   companyName: "",
   companyId: "",
+  relationshipType: "other",
   notes: "",
 };
 
@@ -37,17 +46,54 @@ function personToForm(person: Person): PersonFormValues {
     role: person.role,
     companyName: person.company?.name || "",
     companyId: person.company?.id || "",
+    relationshipType: person.relationshipType,
     notes: person.notes,
   };
 }
 
 function personPayload(form: PersonFormValues) {
   return {
-    ...form,
+    name: form.name,
+    role: form.role,
+    companyName: form.companyName,
+    companyId: form.companyId,
+    relationshipType: form.relationshipType,
+    notes: form.notes,
     linkedin: "",
     howWeMet: "",
-    relationshipType: "other",
   };
+}
+
+function PersonListCard({ person, companyId }: { person: Person; companyId?: string }) {
+  return (
+    <Link
+      href={personLink(person.id, companyId)}
+      className="block rounded-lg border border-border bg-card p-4 hover:border-primary/40"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="min-w-0 font-medium break-words">{person.name}</p>
+        <StatusBadge value={person.relationshipType} label={RELATIONSHIP_LABELS[person.relationshipType]} />
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {[person.role, person.company?.name].filter(Boolean).join(" · ") || "No company yet"}
+      </p>
+      {person.notes ? <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{person.notes}</p> : null}
+    </Link>
+  );
+}
+
+function groupPeople(items: Person[]) {
+  const used = new Set<string>();
+  const sections: { label: string; items: Person[] }[] = [];
+  for (const group of NETWORKING_GROUPS) {
+    const matched = items.filter((person) => (group.types as readonly string[]).includes(person.relationshipType));
+    if (matched.length === 0) continue;
+    matched.forEach((person) => used.add(person.id));
+    sections.push({ label: group.label, items: matched });
+  }
+  const rest = items.filter((person) => !used.has(person.id));
+  if (rest.length > 0) sections.push({ label: "Other connections", items: rest });
+  return sections;
 }
 
 export function NetworkingPage() {
@@ -68,15 +114,27 @@ export function NetworkingPage() {
     <div>
       <PageHeader
         title="Networking"
-        description="People you met and what you want to remember about them."
+        description="Group contacts by why they matter — recruiter, mentor, someone at a company, and so on."
         action={
           <Button asChild>
             <Link href="/networking/new">Add a person</Link>
           </Button>
         }
       />
-      <div className="mb-4">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people" aria-label="Search people" />
+        <Select
+          value={params.get("relationship") || ""}
+          onChange={(event) => setParam("relationship", event.target.value)}
+          aria-label="Connection type"
+        >
+          <option value="">All connection types</option>
+          {RELATIONSHIP_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {RELATIONSHIP_LABELS[type]}
+            </option>
+          ))}
+        </Select>
       </div>
       {people.isLoading ? <Skeleton className="h-48" /> : null}
       {people.isError ? <ErrorState message="People could not be loaded." onRetry={() => people.refetch()} /> : null}
@@ -92,19 +150,30 @@ export function NetworkingPage() {
         />
       ) : null}
       {people.data && people.data.items.length > 0 ? (
-        <ul className="grid gap-3">
-          {people.data.items.map((person) => (
-            <li key={person.id}>
-              <Link href={`/networking/${person.id}`} className="block rounded-lg border border-border bg-card p-4 hover:border-primary/40">
-                <p className="font-medium break-words">{person.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {[person.role, person.company?.name].filter(Boolean).join(" · ") || "No company yet"}
-                </p>
-                {person.notes ? <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{person.notes}</p> : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        params.get("relationship") || debounced ? (
+          <ul className="grid gap-3">
+            {people.data.items.map((person) => (
+              <li key={person.id}>
+                <PersonListCard person={person} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="space-y-8">
+            {groupPeople(people.data.items).map((section) => (
+              <section key={section.label}>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{section.label}</h2>
+                <ul className="mt-3 grid gap-3">
+                  {section.items.map((person) => (
+                    <li key={person.id}>
+                      <PersonListCard person={person} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )
       ) : null}
       {people.data ? (
         <Pagination page={page} total={people.data.total} limit={people.data.limit} onPage={(next) => setParam("page", String(next))} />
@@ -117,6 +186,7 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
   const params = useSearchParams();
   const companyIdParam = params.get("companyId") || "";
   const companyPrefill = useCompanyPrefill(companyIdParam);
+  const returnQuery = personReturnQuery(params);
   const existing = useQuery({
     queryKey: ["person", id],
     enabled: mode === "edit" && Boolean(id),
@@ -128,7 +198,7 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
     if (existing.isError || !existing.data) {
       return <ErrorState message="This person could not be loaded." onRetry={() => existing.refetch()} />;
     }
-    return <PersonEditorForm key={id} mode="edit" id={id} initial={personToForm(existing.data.person)} />;
+    return <PersonEditorForm key={id} mode="edit" id={id} initial={personToForm(existing.data.person)} returnQuery={returnQuery} />;
   }
 
   if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
@@ -139,21 +209,33 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
     companyName: companyPrefill.data?.name || "",
   };
 
-  return <PersonEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
+  return (
+    <PersonEditorForm
+      key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`}
+      mode="create"
+      initial={initial}
+      returnQuery={returnQuery}
+    />
+  );
 }
 
 function PersonEditorForm({
   mode,
   id,
   initial,
+  returnQuery = "",
 }: {
   mode: "create" | "edit";
   id?: string;
   initial: PersonFormValues;
+  returnQuery?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
+  const companyBack = companyBackFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
 
   const save = useMutation({
     mutationFn: () =>
@@ -165,7 +247,8 @@ function PersonEditorForm({
       toast.success(mode === "create" ? "Person added" : "Person updated");
       await client.invalidateQueries({ queryKey: ["people"] });
       await client.invalidateQueries({ queryKey: ["person", person.id] });
-      router.push(`/networking/${person.id}`);
+      await client.invalidateQueries({ queryKey: ["company"] });
+      router.push(`/networking/${person.id}${personReturnQuery(searchParams)}`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -178,13 +261,32 @@ function PersonEditorForm({
         save.mutate();
       }}
     >
+      {companyBack ? (
+        <DetailBackLink
+          href={companyBack.href}
+          label={companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : companyBack.label}
+        />
+      ) : null}
       <PageHeader
         title={mode === "create" ? "Add a person" : "Edit person"}
-        description="Name, role, company, and one note. Keep it light."
+        description="Say who they are, where they work, and why you are keeping them in your network."
       />
       <div className="space-y-4 rounded-lg border border-border bg-card p-5">
         <FormField label="Name" htmlFor="name">
           <Input id="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+        </FormField>
+        <FormField label="Connection type" htmlFor="relationship">
+          <Select
+            id="relationship"
+            value={form.relationshipType}
+            onChange={(event) => setForm({ ...form, relationshipType: event.target.value as RelationshipType })}
+          >
+            {RELATIONSHIP_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {RELATIONSHIP_LABELS[type]}
+              </option>
+            ))}
+          </Select>
         </FormField>
         <FormField label="Role" htmlFor="role">
           <Input id="role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} placeholder="Engineer, recruiter, mentor…" />
@@ -210,7 +312,10 @@ function PersonEditorForm({
 
 export function PersonDetailPage({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const client = useQueryClient();
+  const companyBack = companyBackFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
   const detail = useQuery({
     queryKey: ["person", id],
     queryFn: () => api<{ person: Person; interactions: Interaction[] }>(`/api/people/${id}`),
@@ -257,7 +362,7 @@ export function PersonDetailPage({ id }: { id: string }) {
     mutationFn: () => api(`/api/people/${id}`, { method: "DELETE" }),
     onSuccess: async () => {
       toast.success("Person deleted");
-      router.push("/networking");
+      router.push(companyBack?.href ?? "/networking");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -273,13 +378,19 @@ export function PersonDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
+      {companyBack ? (
+        <DetailBackLink
+          href={companyBack.href}
+          label={companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : companyBack.label}
+        />
+      ) : null}
       <PageHeader
         title={person.name}
-        description={[person.role, person.company?.name].filter(Boolean).join(" · ") || "Contact"}
+        description={[RELATIONSHIP_LABELS[person.relationshipType], person.role, person.company?.name].filter(Boolean).join(" · ") || "Contact"}
         action={
           <div className="flex gap-2">
             <Button asChild variant="secondary">
-              <Link href={`/networking/${id}/edit`}>Edit</Link>
+              <Link href={`/networking/${id}/edit${personReturnQuery(searchParams)}`}>Edit</Link>
             </Button>
             <Button variant="ghost" onClick={() => setConfirm(true)}>
               Delete
@@ -292,12 +403,24 @@ export function PersonDetailPage({ id }: { id: string }) {
         <h2 className="text-lg font-semibold">Profile</h2>
         <dl className="mt-4 space-y-3 text-base">
           <div>
+            <dt className="text-sm text-muted-foreground">Connection type</dt>
+            <dd className="mt-0.5">{RELATIONSHIP_LABELS[person.relationshipType]}</dd>
+          </div>
+          <div>
             <dt className="text-sm text-muted-foreground">Role</dt>
             <dd className="mt-0.5">{person.role || "—"}</dd>
           </div>
           <div>
             <dt className="text-sm text-muted-foreground">Company</dt>
-            <dd className="mt-0.5">{person.company?.name || "—"}</dd>
+            <dd className="mt-0.5">
+              {person.company?.id ? (
+                <Link href={`/companies/${person.company.id}`} className="font-medium underline-offset-4 hover:underline">
+                  {person.company.name}
+                </Link>
+              ) : (
+                person.company?.name || "—"
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-sm text-muted-foreground">Notes</dt>
