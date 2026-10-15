@@ -8,13 +8,19 @@ import { toast } from "sonner";
 import { useCompanyPrefill, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { companyBackFromParams, personLink, personReturnQuery } from "@/features/networking/person-nav";
+import {
+  backTargetFromParams,
+  personLink,
+  resolveBackLink,
+  returnQueryFromSearchParams,
+} from "@/features/navigation/return-nav";
 import { DetailBackLink, EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
 import { FormField, Input, Select, TextArea } from "@/components/ui/fields";
 import {
   INTERACTION_LABELS,
   INTERACTION_TYPES,
   NETWORKING_GROUPS,
+  PERSON_CONNECTION_FORM_GROUPS,
   RELATIONSHIP_LABELS,
   RELATIONSHIP_TYPES,
 } from "@/lib/constants";
@@ -27,6 +33,7 @@ type PersonFormValues = {
   role: string;
   companyName: string;
   companyId: string;
+  linkedin: string;
   relationshipType: RelationshipType;
   notes: string;
 };
@@ -36,6 +43,7 @@ const emptyPerson: PersonFormValues = {
   role: "",
   companyName: "",
   companyId: "",
+  linkedin: "",
   relationshipType: "other",
   notes: "",
 };
@@ -46,6 +54,7 @@ function personToForm(person: Person): PersonFormValues {
     role: person.role,
     companyName: person.company?.name || "",
     companyId: person.company?.id || "",
+    linkedin: person.linkedin,
     relationshipType: person.relationshipType,
     notes: person.notes,
   };
@@ -59,7 +68,7 @@ function personPayload(form: PersonFormValues) {
     companyId: form.companyId,
     relationshipType: form.relationshipType,
     notes: form.notes,
-    linkedin: "",
+    linkedin: form.linkedin.trim(),
     howWeMet: "",
   };
 }
@@ -186,7 +195,7 @@ export function PersonEditor({ mode, id }: { mode: "create" | "edit"; id?: strin
   const params = useSearchParams();
   const companyIdParam = params.get("companyId") || "";
   const companyPrefill = useCompanyPrefill(companyIdParam);
-  const returnQuery = personReturnQuery(params);
+  const returnQuery = returnQueryFromSearchParams(params);
   const existing = useQuery({
     queryKey: ["person", id],
     enabled: mode === "edit" && Boolean(id),
@@ -234,8 +243,14 @@ function PersonEditorForm({
   const searchParams = useSearchParams();
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
-  const companyBack = companyBackFromParams(searchParams);
+  const companyBack = backTargetFromParams(searchParams);
   const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const back = resolveBackLink(
+    searchParams,
+    mode === "edit" && id
+      ? { href: `/networking/${id}${returnQuery}`, label: "Back to profile" }
+      : { href: "/networking", label: "Back to networking" },
+  );
 
   const save = useMutation({
     mutationFn: () =>
@@ -248,7 +263,7 @@ function PersonEditorForm({
       await client.invalidateQueries({ queryKey: ["people"] });
       await client.invalidateQueries({ queryKey: ["person", person.id] });
       await client.invalidateQueries({ queryKey: ["company"] });
-      router.push(`/networking/${person.id}${personReturnQuery(searchParams)}`);
+      router.push(`/networking/${person.id}${returnQueryFromSearchParams(searchParams)}`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -261,12 +276,12 @@ function PersonEditorForm({
         save.mutate();
       }}
     >
-      {companyBack ? (
-        <DetailBackLink
-          href={companyBack.href}
-          label={companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : companyBack.label}
-        />
-      ) : null}
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader
         title={mode === "create" ? "Add a person" : "Edit person"}
         description="Say who they are, where they work, and why you are keeping them in your network."
@@ -281,10 +296,14 @@ function PersonEditorForm({
             value={form.relationshipType}
             onChange={(event) => setForm({ ...form, relationshipType: event.target.value as RelationshipType })}
           >
-            {RELATIONSHIP_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {RELATIONSHIP_LABELS[type]}
-              </option>
+            {PERSON_CONNECTION_FORM_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.types.map((type) => (
+                  <option key={type} value={type}>
+                    {RELATIONSHIP_LABELS[type]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </FormField>
@@ -297,6 +316,15 @@ function PersonEditorForm({
             value={form.companyName}
             onChange={(event) => setForm({ ...form, companyName: event.target.value, companyId: "" })}
             placeholder="Company name"
+          />
+        </FormField>
+        <FormField label="LinkedIn" htmlFor="linkedin">
+          <Input
+            id="linkedin"
+            type="url"
+            value={form.linkedin}
+            onChange={(event) => setForm({ ...form, linkedin: event.target.value })}
+            placeholder="https://www.linkedin.com/in/… (optional)"
           />
         </FormField>
         <FormField label="Notes" htmlFor="notes">
@@ -314,8 +342,10 @@ export function PersonDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const client = useQueryClient();
-  const companyBack = companyBackFromParams(searchParams);
+  const companyBack = backTargetFromParams(searchParams);
   const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const returnQuery = returnQueryFromSearchParams(searchParams);
+  const back = resolveBackLink(searchParams, { href: "/networking", label: "Back to networking" });
   const detail = useQuery({
     queryKey: ["person", id],
     queryFn: () => api<{ person: Person; interactions: Interaction[] }>(`/api/people/${id}`),
@@ -378,19 +408,19 @@ export function PersonDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      {companyBack ? (
-        <DetailBackLink
-          href={companyBack.href}
-          label={companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : companyBack.label}
-        />
-      ) : null}
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader
         title={person.name}
         description={[RELATIONSHIP_LABELS[person.relationshipType], person.role, person.company?.name].filter(Boolean).join(" · ") || "Contact"}
         action={
           <div className="flex gap-2">
             <Button asChild variant="secondary">
-              <Link href={`/networking/${id}/edit${personReturnQuery(searchParams)}`}>Edit</Link>
+              <Link href={`/networking/${id}/edit${returnQuery}`}>Edit</Link>
             </Button>
             <Button variant="ghost" onClick={() => setConfirm(true)}>
               Delete
@@ -419,6 +449,23 @@ export function PersonDetailPage({ id }: { id: string }) {
                 </Link>
               ) : (
                 person.company?.name || "—"
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted-foreground">LinkedIn</dt>
+            <dd className="mt-0.5">
+              {person.linkedin ? (
+                <a
+                  href={person.linkedin}
+                  className="break-all font-medium underline-offset-4 hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {person.linkedin}
+                </a>
+              ) : (
+                "—"
               )}
             </dd>
           </div>

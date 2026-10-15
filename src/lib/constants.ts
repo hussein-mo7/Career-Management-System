@@ -243,7 +243,7 @@ export const NETWORKING_GROUPS = [
       "designer",
     ] as const,
   },
-  { id: "support", label: "Mentors & coaches", types: ["mentor", "tap_contact"] as const },
+  { id: "support", label: "Mentors (TAP & other)", types: ["tap_contact", "mentor"] as const },
   { id: "other", label: "Other connections", types: ["other"] as const },
 ] as const;
 
@@ -258,9 +258,29 @@ export const RELATIONSHIP_LABELS: Record<(typeof RELATIONSHIP_TYPES)[number], st
   product_manager: "Product manager",
   designer: "Designer",
   mentor: "Mentor",
-  tap_contact: "TAP contact",
+  tap_contact: "Mentor (TAP)",
   other: "Other",
 };
+
+/** Connection type options in the person form (grouped for clarity). */
+export const PERSON_CONNECTION_FORM_GROUPS = [
+  { label: "Recruiting", types: ["recruiter"] as const },
+  { label: "Mentors (TAP & other)", types: ["tap_contact", "mentor"] as const },
+  {
+    label: "People at a company",
+    types: [
+      "developer",
+      "senior_developer",
+      "tech_lead",
+      "engineering_manager",
+      "cto",
+      "founder",
+      "product_manager",
+      "designer",
+    ] as const,
+  },
+  { label: "Other", types: ["other"] as const },
+] as const;
 
 export const INTERACTION_LABELS: Record<(typeof INTERACTION_TYPES)[number], string> = {
   coffee_chat: "Coffee chat",

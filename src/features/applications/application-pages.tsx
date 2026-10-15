@@ -8,7 +8,13 @@ import { toast } from "sonner";
 import { useCompanyPrefill, useDebounced, useListParams, usePersonChoices } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
+import {
+  backTargetFromParams,
+  resolveBackLink,
+  buildReturnQuery,
+  returnQueryFromSearchParams,
+} from "@/features/navigation/return-nav";
+import { DetailBackLink, EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
 import { FormField, Input, Select, TextArea } from "@/components/ui/fields";
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS } from "@/lib/constants";
 import { api } from "@/lib/api";
@@ -146,7 +152,15 @@ export function ApplicationEditor({ mode, id }: { mode: "create" | "edit"; id?: 
     if (existing.isError || !existing.data) {
       return <ErrorState message="This application could not be loaded." onRetry={() => existing.refetch()} />;
     }
-    return <ApplicationEditorForm key={id} mode="edit" id={id} initial={applicationToForm(existing.data)} />;
+    return (
+      <ApplicationEditorForm
+        key={id}
+        mode="edit"
+        id={id}
+        initial={applicationToForm(existing.data)}
+        returnQuery={returnQueryFromSearchParams(params)}
+      />
+    );
   }
 
   if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
@@ -157,22 +171,40 @@ export function ApplicationEditor({ mode, id }: { mode: "create" | "edit"; id?: 
     companyName: companyPrefill.data?.name || "",
   };
 
-  return <ApplicationEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
+  return (
+    <ApplicationEditorForm
+      key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`}
+      mode="create"
+      initial={initial}
+      returnQuery={returnQueryFromSearchParams(params)}
+    />
+  );
 }
 
 function ApplicationEditorForm({
   mode,
   id,
   initial,
+  returnQuery = "",
 }: {
   mode: "create" | "edit";
   id?: string;
   initial: ApplicationFormValues;
+  returnQuery?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
   const people = usePersonChoices();
+  const companyBack = backTargetFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const back = resolveBackLink(
+    searchParams,
+    mode === "edit" && id
+      ? { href: `/applications/${id}${returnQuery}`, label: "Back to application" }
+      : { href: "/applications", label: "Back to applications" },
+  );
 
   const save = useMutation({
     mutationFn: () =>
@@ -188,7 +220,7 @@ function ApplicationEditorForm({
       toast.success(mode === "create" ? "Application added" : "Application updated");
       await client.invalidateQueries({ queryKey: ["applications"] });
       await client.invalidateQueries({ queryKey: ["dashboard"] });
-      router.push(`/applications/${item.id}`);
+      router.push(`/applications/${item.id}${returnQueryFromSearchParams(searchParams)}`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -201,6 +233,12 @@ function ApplicationEditorForm({
         save.mutate();
       }}
     >
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader title={mode === "create" ? "Add application" : "Edit application"} description="Company and role are the only required pieces." />
       <div className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-2">
         <FormField label="Company" htmlFor="company">
@@ -265,13 +303,18 @@ function ApplicationEditorForm({
 
 export function ApplicationDetailPage({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [confirm, setConfirm] = useState(false);
+  const returnQuery = returnQueryFromSearchParams(searchParams);
+  const companyBack = backTargetFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const back = resolveBackLink(searchParams, { href: "/applications", label: "Back to applications" });
   const item = useQuery({ queryKey: ["application", id], queryFn: () => api<Application>(`/api/applications/${id}`) });
   const remove = useMutation({
     mutationFn: () => api(`/api/applications/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       toast.success("Application deleted");
-      router.push("/applications");
+      router.push(back.href);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -280,10 +323,25 @@ export function ApplicationDetailPage({ id }: { id: string }) {
   const application = item.data;
   return (
     <div className="space-y-4">
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader
         title={application.role}
         description={application.company?.name || "Application"}
-        action={<div className="flex gap-2"><Button asChild variant="secondary"><Link href={`/applications/${id}/edit`}>Edit</Link></Button><Button variant="ghost" onClick={() => setConfirm(true)}>Delete</Button></div>}
+        action={
+          <div className="flex gap-2">
+            <Button asChild variant="secondary">
+              <Link href={`/applications/${id}/edit${returnQuery}`}>Edit</Link>
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirm(true)}>
+              Delete
+            </Button>
+          </div>
+        }
       />
       <section className="rounded-lg border border-border bg-card p-5">
         <StatusBadge value={application.status} label={APPLICATION_STATUS_LABELS[application.status]} />
@@ -291,7 +349,21 @@ export function ApplicationDetailPage({ id }: { id: string }) {
           <div><dt className="text-muted-foreground">Applied</dt><dd>{formatDay(application.dateApplied)}</dd></div>
           <div><dt className="text-muted-foreground">Follow up</dt><dd>{formatDay(application.followUpDate)}</dd></div>
           <div><dt className="text-muted-foreground">CV</dt><dd>{application.cvVersion || "—"}</dd></div>
-          <div><dt className="text-muted-foreground">Contact</dt><dd>{application.contact ? <Link className="underline-offset-4 hover:underline" href={`/networking/${application.contact.id}`}>{application.contact.name}</Link> : "—"}</dd></div>
+          <div>
+            <dt className="text-muted-foreground">Contact</dt>
+            <dd>
+              {application.contact ? (
+                <Link
+                  className="underline-offset-4 hover:underline"
+                  href={`/networking/${application.contact.id}${buildReturnQuery("application", { applicationId: id })}`}
+                >
+                  {application.contact.name}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </dd>
+          </div>
         </dl>
         {application.nextAction ? <p className="mt-4 text-sm font-medium">Next: {application.nextAction}</p> : null}
         {application.jobUrl ? <a className="mt-3 inline-block text-sm font-medium underline-offset-4 hover:underline" href={application.jobUrl} target="_blank" rel="noreferrer">Open job post</a> : null}

@@ -8,7 +8,12 @@ import { toast } from "sonner";
 import { useCompanyPrefill, useDebounced, useListParams } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
+import {
+  backTargetFromParams,
+  resolveBackLink,
+  returnQueryFromSearchParams,
+} from "@/features/navigation/return-nav";
+import { DetailBackLink, EmptyState, ErrorState, PageHeader, Pagination, Skeleton, StatusBadge } from "@/components/ui/feedback";
 import { FormField, Input, Select, TextArea } from "@/components/ui/fields";
 import {
   INTERVIEW_RESULT_LABELS,
@@ -129,7 +134,15 @@ export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: st
     if (existing.isError || !existing.data) {
       return <ErrorState message="This interview could not be loaded." onRetry={() => existing.refetch()} />;
     }
-    return <InterviewEditorForm key={id} mode="edit" id={id} initial={interviewToForm(existing.data.interview)} />;
+    return (
+      <InterviewEditorForm
+        key={id}
+        mode="edit"
+        id={id}
+        initial={interviewToForm(existing.data.interview)}
+        returnQuery={returnQueryFromSearchParams(params)}
+      />
+    );
   }
 
   if (companyIdParam && companyPrefill.isLoading) return <Skeleton className="h-64" />;
@@ -140,21 +153,39 @@ export function InterviewEditor({ mode, id }: { mode: "create" | "edit"; id?: st
     companyName: companyPrefill.data?.name || "",
   };
 
-  return <InterviewEditorForm key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`} mode="create" initial={initial} />;
+  return (
+    <InterviewEditorForm
+      key={`new-${companyIdParam}-${companyPrefill.data?.name || ""}`}
+      mode="create"
+      initial={initial}
+      returnQuery={returnQueryFromSearchParams(params)}
+    />
+  );
 }
 
 function InterviewEditorForm({
   mode,
   id,
   initial,
+  returnQuery = "",
 }: {
   mode: "create" | "edit";
   id?: string;
   initial: InterviewFormValues;
+  returnQuery?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
+  const companyBack = backTargetFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const back = resolveBackLink(
+    searchParams,
+    mode === "edit" && id
+      ? { href: `/interviews/${id}${returnQuery}`, label: "Back to interview" }
+      : { href: "/interviews", label: "Back to interviews" },
+  );
 
   const save = useMutation({
     mutationFn: () =>
@@ -170,13 +201,19 @@ function InterviewEditorForm({
       toast.success(mode === "create" ? "Interview added" : "Interview updated");
       await client.invalidateQueries({ queryKey: ["interviews"] });
       await client.invalidateQueries({ queryKey: ["dashboard"] });
-      router.push(`/interviews/${interview.id}`);
+      router.push(`/interviews/${interview.id}${returnQueryFromSearchParams(searchParams)}`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   return (
     <form className="grid gap-4" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader title={mode === "create" ? "Add interview" : "Edit interview"} description="Company, role, and when it happened. Notes can stay blank until you are ready." />
       <div className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-2">
         <FormField label="Company" htmlFor="company">
@@ -231,8 +268,13 @@ function InterviewEditorForm({
 
 export function InterviewDetailPage({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const client = useQueryClient();
   const [confirm, setConfirm] = useState(false);
+  const returnQuery = returnQueryFromSearchParams(searchParams);
+  const companyBack = backTargetFromParams(searchParams);
+  const companyPrefill = useCompanyPrefill(companyBack?.companyId ?? "");
+  const back = resolveBackLink(searchParams, { href: "/interviews", label: "Back to interviews" });
   const detail = useQuery({
     queryKey: ["interview", id],
     queryFn: () => api<{ interview: Interview }>(`/api/interviews/${id}`),
@@ -243,7 +285,7 @@ export function InterviewDetailPage({ id }: { id: string }) {
     onSuccess: async () => {
       toast.success("Interview deleted");
       await client.invalidateQueries({ queryKey: ["interviews"] });
-      router.push("/interviews");
+      router.push(back.href);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -254,10 +296,25 @@ export function InterviewDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
+      <DetailBackLink
+        href={back.href}
+        label={
+          companyBack && companyPrefill.data?.name ? `Back to ${companyPrefill.data.name}` : back.label
+        }
+      />
       <PageHeader
         title={interview.role}
         description={interview.company?.name || "Interview"}
-        action={<div className="flex gap-2"><Button asChild variant="secondary"><Link href={`/interviews/${id}/edit`}>Edit</Link></Button><Button variant="ghost" onClick={() => setConfirm(true)}>Delete</Button></div>}
+        action={
+          <div className="flex gap-2">
+            <Button asChild variant="secondary">
+              <Link href={`/interviews/${id}/edit${returnQuery}`}>Edit</Link>
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirm(true)}>
+              Delete
+            </Button>
+          </div>
+        }
       />
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Company" value={interview.company?.name || "—"} />

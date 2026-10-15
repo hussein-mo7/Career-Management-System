@@ -8,8 +8,15 @@ import { toast } from "sonner";
 import { CompanyForm, companyToForm, emptyCompany, type CompanyFormValues } from "@/features/companies/company-form";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialogs";
-import { companyPersonEditorPath, personLink } from "@/features/networking/person-nav";
-import { ErrorState, PageHeader, Skeleton, StatusBadge } from "@/components/ui/feedback";
+import {
+  applicationLink,
+  companyApplicationEditorPath,
+  companyInterviewEditorPath,
+  companyPersonEditorPath,
+  companyReturnQuery,
+  personLink,
+} from "@/features/navigation/return-nav";
+import { DetailBackLink, ErrorState, PageHeader, Skeleton, StatusBadge } from "@/components/ui/feedback";
 import { RELATIONSHIP_LABELS } from "@/lib/constants";
 import {
   COMPANY_STATUS_LABELS,
@@ -54,8 +61,14 @@ export function CompanyEditor({ mode, id }: { mode: "create" | "edit"; id?: stri
   if (mode === "edit" && existing.isLoading) return <Skeleton className="h-80" />;
   if (mode === "edit" && existing.isError) return <ErrorState message="This company could not be loaded." onRetry={() => existing.refetch()} />;
 
+  const back =
+    mode === "edit" && id
+      ? { href: `/companies/${id}`, label: "Back to company" }
+      : { href: "/companies", label: "Back to companies" };
+
   return (
     <div>
+      <DetailBackLink href={back.href} label={back.label} />
       <PageHeader
         title={mode === "create" ? "Add company" : `Edit ${existing.data?.company.name ?? "company"}`}
         description="The basics, a fit score, and why this company is worth targeting."
@@ -95,6 +108,7 @@ export function CompanyDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
+      <DetailBackLink href="/companies" label="Back to companies" />
       <PageHeader
         title={company.name}
         description={location || "Target company"}
@@ -136,10 +150,10 @@ export function CompanyDetailPage({ id }: { id: string }) {
             <Link href={companyPersonEditorPath(id)}>Add person</Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/applications/new?companyId=${id}`}>Add application</Link>
+            <Link href={companyApplicationEditorPath(id)}>Add application</Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/interviews/new?companyId=${id}`}>Add interview</Link>
+            <Link href={companyInterviewEditorPath(id)}>Add interview</Link>
           </Button>
         </div>
       </section>
@@ -161,9 +175,9 @@ export function CompanyDetailPage({ id }: { id: string }) {
             </Link>
           ))}
         </RecordList>
-        <RecordList title="Applications" empty="No applications yet." href={`/applications/new?companyId=${id}`} action="Add application">
+        <RecordList title="Applications" empty="No applications yet." href={companyApplicationEditorPath(id)} action="Add application">
           {applications.map((application) => (
-            <Link key={application.id} href={`/applications/${application.id}`} className="block py-2 text-sm hover:underline">
+            <Link key={application.id} href={applicationLink(application.id, id)} className="block py-2 text-sm hover:underline">
               {application.role}
             </Link>
           ))}
@@ -178,7 +192,14 @@ export function CompanyDetailPage({ id }: { id: string }) {
           <ul className="mt-3 space-y-2">
             {activity.map((item) => (
               <li key={item.id}>
-                <Link href={item.href || `/companies/${id}`} className="block rounded-lg border border-border bg-card px-4 py-3">
+                <Link
+                  href={
+                    item.href && !item.href.startsWith(`/companies/${id}`)
+                      ? `${item.href}${companyReturnQuery(id)}`
+                      : item.href || `/companies/${id}`
+                  }
+                  className="block rounded-lg border border-border bg-card px-4 py-3"
+                >
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.type} · {formatDateTime(item.date)}</p>
                   <p className="mt-1 text-sm font-medium">{item.title}</p>
                   <p className="text-sm text-muted-foreground">{item.detail}</p>
